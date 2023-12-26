@@ -1,0 +1,1550 @@
+diff --git a/CONTRIBUTORS b/CONTRIBUTORS
+index 24f72e86..6df5f535 100644
+--- a/CONTRIBUTORS
++++ b/CONTRIBUTORS
+@@ -275,7 +275,7 @@ Aaron Holtzman
+ Wolfgang Henselmann-Weiss <Wolfgang_Henselmann@betaresearch.de>
+  for fixing calculating the timeout value in cFile::FileReady()
+ 
+-Uwe Scheffler <linux_dvb@uni.de>
++Uwe Scheffler <scheffler.u@web.de>
+  for his help in keeping 'channels.conf.cable' and 'channels.conf.terr' up to date
+  for helping to test new DVB-T handling
+  for reporting a bug in switching the video format in the Setup/DVB menu
+@@ -285,6 +285,7 @@ Uwe Scheffler <linux_dvb@uni.de>
+  for reporting a black screen while a "Recording started" message is displayed
+  for reporting a problem with the lock on the Channels list in cDisplayChannel still
+  being held when Flush() was called
++ for reporting a problem with failed tuning in SCR systems
+ 
+ Matjaz Thaler <matjaz.thaler@guest.arnes.si>
+  for improving AC3 decoding when replaying DVDs
+@@ -2270,9 +2271,6 @@ Javier Fern
+ Jürgen Schneider <ivory7@gmx.de>
+  for a patch that was used as a base to fix handling multi byte key sequences
+  in cKbdRemote
+- for reporting a possible discrepancy of the primary device number in the LSTD and
+- PRIM commands
+- for adding support for EAC3 audio from other sources
+ 
+ Christian Wieninger <cwieninger@gmx.de>
+  for suggesting to add cMenuEditStrItem::InEditMode()
+@@ -2918,6 +2916,9 @@ Manuel Reimer <Manuel.Reimer@gmx.de>
+  order to avoid discontinuities
+  for setting the environment variables HOME, USER, LOGNAME and SHELL accordingly
+  when switching to a less privileged user id
++ for reporting a bug in moving channels between number groups in SVDRP's MOVC command
++ for fixing compatibility with current versions of glibc
++ for suggesting to make the SVDRP command DELC accept a channel id
+ 
+ Rene van den Braken <rene@vandenbraken.name>
+  for reporting a bug in writing the PCR pid into the PMT in
+@@ -3585,6 +3586,13 @@ Helmut Binder <cco@aon.at>
+  for fixing updating the checksum in the CA table after mapping EMM PIDs for MTD
+  for fixing a compiler warning in ExchangeChars()
+  for suggesting to add __attribute__((packed)) to tIndexPes and tIndexTs
++ for helping with the implementation of retuning if the received transponder's SDT
++ doesn't contain the expected values for NID and TID
++ for adding the language code for Bulgarian
++ for a patch that was used as a base for fixing handling multi part ExtendedEventDescriptors
++ where only the first part contains information about the character table
++ for suggesting to check and report whether the given value is valid when setting the
++ override character table
+ 
+ Ulrich Eckhardt <uli@uli-eckhardt.de>
+  for reporting a problem with shutdown after user inactivity in case a plugin is
+@@ -3592,3 +3600,8 @@ Ulrich Eckhardt <uli@uli-eckhardt.de>
+ 
+ Stian B. Barmen <stian@barmen.nu>
+  for reporting missing EPG data on channels from Canal Digital Norway
++
++Jürgen Schneider <jsffm@web.de>
++ for reporting a possible discrepancy of the primary device number in the LSTD and
++ PRIM commands
++ for adding support for EAC3 audio from other sources
+diff --git a/HISTORY b/HISTORY
+index 143138ec..edd56ac5 100644
+--- a/HISTORY
++++ b/HISTORY
+@@ -9419,3 +9419,36 @@ Video Disk Recorder Revision History
+   the call is now automatically forwarded to QueueMessage().
+ - Fixed handling the S2SatelliteDeliverySystemDescriptor for transponders broadcasting
+   in "backwards compatibility mode" according to ETSI EN 300 468 (thanks to Onur Sentürk).
++
++2020-05-18: Version 2.4.2
++
++- Fixed moving channels between number groups in SVDRP's MOVC command and the Channels
++  menu, in case a channel is moved to a higher number and into a numbered group
++  (reported by Manuel Reimer).
++- Now retuning if the received transponder's SDT doesn't contain the expected values
++  for NID and TID (thanks to Uwe Scheffler for reporting a problem with failed tuning
++  in SCR systems, and Helmut Binder for helping with the implementation).
++- Fixed compatibility with current versions of glibc (thanks to Manuel Reimer).
++- The SVDRP command DELC now also accepts a channel id (suggested by Manuel Reimer).
++- Fixed dropping capabilities in case cap_sys_time is not available.
++- Added the language code for Bulgarian (thanks to Helmut Binder).
++- Fixed handling multi part ExtendedEventDescriptors where only the first part
++  contains information about the character table (based on a patch from Helmut Binder).
++- When setting the system character table, it is no longer checked against the known
++  entries that are hard coded in libsi/si.c, but rather given to iconv_open() and the
++  result of that call is used to check whether the given name is valid.
++- Checking whether the system character table is "single byte" is now done by checking
++  the result of a sample call to iconv().
++- Setting the override character table now checks and reports whether the given value
++  is valid (suggested by Helmut Binder).
++- The isSingleByte parameter in the call to getCharacterTable() is deprecated and only
++  present for backwards compatibility.
++- Fixed a possible crash in case replay is started and stopped in rapid sequence, by
++  adding missing locking to cControl::Control(). The caller of this function must now
++  provide a cMutexLock which stays alive as long as the result of this call is used.
++  The old version of this function is still there for backwards compatibility with
++  plugins, because this problem appears to occur only under very rare circumstances.
++  Authors of plugins that use this function should switch to the new version, because
++  the old one is deprecated and will be removed in a future version.
++  The version numbers (both VDRVERSNUM and APIVERSNUM) have been bumped to 2.4.2, so
++  that plugins can detect the presence of the new cControl::Control().
+diff --git a/MANUAL b/MANUAL
+index 1086add6..906b065d 100644
+--- a/MANUAL
++++ b/MANUAL
+@@ -1131,7 +1131,7 @@ Version 2.4
+                          The time (in milliseconds) between two subsequent key
+                          presses generated by the remote control's repeat function.
+                          If the remote control in use has a repeat delta that is
+-                         longer than that given in this parameter, that longer delay
++                         longer than that given in this parameter, that longer delta
+                          will prevail.
+   Initial channel =      The channel ID of the channel that shall be tuned to when
+                          VDR starts. Default is empty, which means that it will
+diff --git a/PLUGINS/src/skincurses/HISTORY b/PLUGINS/src/skincurses/HISTORY
+index cab83551..cda9fa36 100644
+--- a/PLUGINS/src/skincurses/HISTORY
++++ b/PLUGINS/src/skincurses/HISTORY
+@@ -145,3 +145,10 @@ VDR Plugin 'skincurses' Revision History
+ 2019-03-12: Version 2.4.1
+ 
+ - Changes for ncurses version 6 (thanks to Ulrick Eckhardt).
++
++2020-05-11: Version 2.4.2
++
++- Fixed 'Changes for ncurses version 6'.
++- Reacting to changes in screen size.
++- Simplified color handling.
++- Using 'stdscr' directly instead of an additional window.
+diff --git a/PLUGINS/src/skincurses/skincurses.c b/PLUGINS/src/skincurses/skincurses.c
+index 2c908071..9e8b59e8 100644
+--- a/PLUGINS/src/skincurses/skincurses.c
++++ b/PLUGINS/src/skincurses/skincurses.c
+@@ -3,7 +3,7 @@
+  *
+  * See the README file for copyright information and how to reach the author.
+  *
+- * $Id: skincurses.c 4.4 2019/03/12 12:24:34 kls Exp $
++ * $Id: skincurses.c 4.6 2020/05/11 10:23:15 kls Exp $
+  */
+ 
+ #include <ncurses.h>
+@@ -12,7 +12,7 @@
+ #include <vdr/skins.h>
+ #include <vdr/videodir.h>
+ 
+-static const char *VERSION        = "2.4.1";
++static const char *VERSION        = "2.4.2";
+ static const char *DESCRIPTION    = trNOOP("A text only skin");
+ static const char *MAINMENUENTRY  = NULL;
+ 
+@@ -60,9 +60,7 @@ static int ScOsdHeight = 20;
+ class cCursesOsd : public cOsd {
+ private:
+   WINDOW *savedRegion;
+-  WINDOW *window;
+-  enum { MaxColorPairs = 16 };
+-  int colorPairs[MaxColorPairs];
++  cVector<int> colorPairs;
+   void SetColor(int colorFg, int colorBg = clrBackground);
+ public:
+   cCursesOsd(int Left, int Top);
+@@ -79,40 +77,34 @@ cCursesOsd::cCursesOsd(int Left, int Top)
+ {
+   savedRegion = NULL;
+ 
+-  memset(colorPairs, 0x00, sizeof(colorPairs));
+   start_color();
+   leaveok(stdscr, true);
++  refresh(); // to react on changes to screen size
+ 
+-  window = subwin(stdscr, ScOsdHeight, ScOsdWidth, 0, 0);
+-  syncok(window, true);
++  int begy, begx;
++  int maxy, maxx;
++  getmaxyx(stdscr, maxy, maxx);
++  getbegyx(stdscr, begy, begx);
++  ScOsdWidth  = maxx - begx;
++  ScOsdHeight = maxy - begy;
+ }
+ 
+ cCursesOsd::~cCursesOsd()
+ {
+-  if (window) {
+-     werase(window);
+-     Flush();
+-     delwin(window);
+-     window = NULL;
+-     }
++  erase();
++  Flush();
+ }
+ 
+ void cCursesOsd::SetColor(int colorFg, int colorBg)
+ {
+   int color = (colorBg << 16) | colorFg | 0x80000000;
+-  for (int i = 0; i < MaxColorPairs; i++) {
+-      if (!colorPairs[i]) {
+-         colorPairs[i] = color;
+-         init_pair(i + 1, colorFg, colorBg);
+-         //XXX??? attron(COLOR_PAIR(WHITE_ON_BLUE));
+-         wattrset(window, COLOR_PAIR(i + 1));
+-         break;
+-         }
+-      else if (color == colorPairs[i]) {
+-         wattrset(window, COLOR_PAIR(i + 1));
+-         break;
+-         }
+-      }
++  int i = colorPairs.IndexOf(color);
++  if (i < 0) {
++     colorPairs.Append(color);
++     i = colorPairs.Size() - 1;
++     init_pair(i + 1, colorFg, colorBg);
++     }
++  attrset(COLOR_PAIR(i + 1));
+ }
+ 
+ void cCursesOsd::SaveRegion(int x1, int y1, int x2, int y2)
+@@ -122,17 +114,14 @@ void cCursesOsd::SaveRegion(int x1, int y1, int x2, int y2)
+      savedRegion = NULL;
+      }
+   savedRegion = newwin(y2 - y1 + 1, x2 - x1 + 1, y1, x1);
+-  copywin(window, savedRegion, y1, x1, 0, 0, y2 - y1, x2 - x1, false);
++  if (savedRegion)
++     copywin(stdscr, savedRegion, y1, x1, 0, 0, y2 - y1, x2 - x1, false);
+ }
+ 
+ void cCursesOsd::RestoreRegion(void)
+ {
+-  int begy, begx;
+-  int maxy, maxx;
+-  getmaxyx(savedRegion, maxy,maxx);
+-  getbegyx(savedRegion, begy,begx);
+   if (savedRegion) {
+-     copywin(savedRegion, window, 0, 0, begy, begx, maxy - begy, maxx - begx, false);
++     overwrite(savedRegion, stdscr);
+      delwin(savedRegion);
+      savedRegion = NULL;
+      }
+@@ -172,18 +161,22 @@ void cCursesOsd::DrawText(int x, int y, const char *s, tColor ColorFg, tColor Co
+         }
+      }
+   SetColor(ColorFg, ColorBg);
+-  wmove(window, y, x); // ncurses wants 'y' before 'x'!
+-  waddnstr(window, s, Width ? Width : ScOsdWidth - x);
++  mvaddnstr(y, x, s, Width ? Width : ScOsdWidth - x);
+ }
+ 
+ void cCursesOsd::DrawRectangle(int x1, int y1, int x2, int y2, tColor Color)
+ {
+   SetColor(Color, Color);
+-  for (int y = y1; y <= y2; y++) {
+-      wmove(window, y, x1); // ncurses wants 'y' before 'x'!
+-      whline(window, ' ', x2 - x1 + 1);
+-      }
+-  wsyncup(window); // shouldn't be necessary because of 'syncok()', but w/o it doesn't work
++  int dx = x2 - x1;
++  int dy = y2 - y1;
++  if (dx >= dy) {
++     for (int y = y1; y <= y2; y++)
++         mvhline(y, x1, ' ', dx + 1);
++     }
++  else {
++     for (int x = x1; x <= x2; x++)
++         mvvline(y1, x, ' ', dy + 1);
++     }
+ }
+ 
+ void cCursesOsd::Flush(void)
+@@ -831,16 +824,8 @@ bool cPluginSkinCurses::ProcessArgs(int argc, char *argv[])
+ bool cPluginSkinCurses::Initialize(void)
+ {
+   // Initialize any background activities the plugin shall perform.
+-  WINDOW *w = initscr();
+-  int begy, begx;
+-  int maxy, maxx;
+-  getmaxyx(w, maxy,maxx);
+-  getbegyx(w, begy,begx);
+-  if (w) {
+-     ScOsdWidth  = maxx - begx + 1;
+-     ScOsdHeight = maxy - begy + 1;
++  if (initscr())
+      return true;
+-     }
+   return false;
+ }
+ 
+diff --git a/channels.c b/channels.c
+index 2716b595..606ed8ff 100644
+--- a/channels.c
++++ b/channels.c
+@@ -4,7 +4,7 @@
+  * See the main source file 'vdr.c' for copyright information and
+  * how to reach the author.
+  *
+- * $Id: channels.c 4.5 2017/06/10 15:08:56 kls Exp $
++ * $Id: channels.c 4.6 2020/04/11 09:22:05 kls Exp $
+  */
+ 
+ #include "channels.h"
+@@ -946,6 +946,25 @@ void cChannels::ReNumber(void)
+       }
+ }
+ 
++bool cChannels::MoveNeedsDecrement(cChannel *From, cChannel *To)
++{
++  int Number = From->Number();
++  if (Number < To->Number()) {
++     for (cChannel *Channel = Next(From); Channel; Channel = Next(Channel)) {
++         if (Channel == To)
++            break;
++         if (Channel->GroupSep()) {
++            if (Channel->Number() > Number)
++               Number = Channel->Number();
++            }
++         else
++            Number++;
++         }
++     return Number == To->Number();
++     }
++  return false;
++}
++
+ void cChannels::Del(cChannel *Channel)
+ {
+   UnhashChannel(Channel);
+diff --git a/channels.h b/channels.h
+index 1543f95b..d368b558 100644
+--- a/channels.h
++++ b/channels.h
+@@ -4,7 +4,7 @@
+  * See the main source file 'vdr.c' for copyright information and
+  * how to reach the author.
+  *
+- * $Id: channels.h 4.3 2017/06/10 15:06:40 kls Exp $
++ * $Id: channels.h 4.4 2020/04/11 09:22:05 kls Exp $
+  */
+ 
+ #ifndef __CHANNELS_H
+@@ -230,6 +230,7 @@ public:
+   int GetNextNormal(int Idx) const;  ///< Get next normal channel (not group)
+   int GetPrevNormal(int Idx) const;  ///< Get previous normal channel (not group)
+   void ReNumber(void);               ///< Recalculate 'number' based on channel type
++  bool MoveNeedsDecrement(cChannel *From, cChannel *To); // Detect special case when moving a channel (closely related to Renumber())
+   void Del(cChannel *Channel);       ///< Delete the given Channel from the list
+   const cChannel *GetByNumber(int Number, int SkipGap = 0) const;
+   cChannel *GetByNumber(int Number, int SkipGap = 0) { return const_cast<cChannel *>(static_cast<const cChannels *>(this)->GetByNumber(Number, SkipGap)); }
+diff --git a/config.h b/config.h
+index 4f37e072..72be5231 100644
+--- a/config.h
++++ b/config.h
+@@ -4,7 +4,7 @@
+  * See the main source file 'vdr.c' for copyright information and
+  * how to reach the author.
+  *
+- * $Id: config.h 4.16 2019/06/16 09:13:45 kls Exp $
++ * $Id: config.h 4.17 2020/05/18 16:47:29 kls Exp $
+  */
+ 
+ #ifndef __CONFIG_H
+@@ -22,13 +22,13 @@
+ 
+ // VDR's own version number:
+ 
+-#define VDRVERSION  "2.4.1"
+-#define VDRVERSNUM   20401  // Version * 10000 + Major * 100 + Minor
++#define VDRVERSION  "2.4.2"
++#define VDRVERSNUM   20402  // Version * 10000 + Major * 100 + Minor
+ 
+ // The plugin API's version number:
+ 
+-#define APIVERSION  "2.4.1"
+-#define APIVERSNUM   20401  // Version * 10000 + Major * 100 + Minor
++#define APIVERSION  "2.4.2"
++#define APIVERSNUM   20402  // Version * 10000 + Major * 100 + Minor
+ 
+ // When loading plugins, VDR searches them by their APIVERSION, which
+ // may be smaller than VDRVERSION in case there have been no changes to
+diff --git a/device.h b/device.h
+index 39621a3c..76785f4b 100644
+--- a/device.h
++++ b/device.h
+@@ -4,7 +4,7 @@
+  * See the main source file 'vdr.c' for copyright information and
+  * how to reach the author.
+  *
+- * $Id: device.h 4.13 2019/05/28 14:47:09 kls Exp $
++ * $Id: device.h 4.15 2020/05/04 11:40:44 kls Exp $
+  */
+ 
+ #ifndef __DEVICE_H
+@@ -332,7 +332,7 @@ public:
+          ///< Returns true if it is ok to switch to the Channel's transponder on this
+          ///< device, without disturbing any other activities. If an occupied timeout
+          ///< has been set for this device, and that timeout has not yet expired,
+-         ///< this function returns false,
++         ///< this function returns false.
+   bool SwitchChannel(const cChannel *Channel, bool LiveView);
+          ///< Switches the device to the given Channel, initiating transfer mode
+          ///< if necessary.
+@@ -450,6 +450,8 @@ public:
+        ///< Attaches the given filter to this device.
+   void Detach(cFilter *Filter);
+        ///< Detaches the given filter from this device.
++  const cSdtFilter *SdtFilter(void) const { return sdtFilter; }
++  cSectionHandler *SectionHandler(void) const { return sectionHandler; }
+ 
+ // Common Interface facilities:
+ 
+diff --git a/dvbdevice.c b/dvbdevice.c
+index 70671b30..562d2697 100644
+--- a/dvbdevice.c
++++ b/dvbdevice.c
+@@ -4,7 +4,7 @@
+  * See the main source file 'vdr.c' for copyright information and
+  * how to reach the author.
+  *
+- * $Id: dvbdevice.c 4.21 2019/05/28 14:40:49 kls Exp $
++ * $Id: dvbdevice.c 4.22 2020/05/04 08:50:20 kls Exp $
+  */
+ 
+ #include "dvbdevice.h"
+@@ -1701,6 +1701,7 @@ void cDvbTuner::Action(void)
+                      }
+                   }
+                tunerStatus = tsTuned;
++               device->SectionHandler()->SetStatus(true); // may have been turned off when retuning
+                Timer.Set(tuneTimeout + (scr ? rand() % SCR_RANDOM_TIMEOUT : 0));
+                if (positioner)
+                   continue;
+@@ -1733,6 +1734,14 @@ void cDvbTuner::Action(void)
+                      isyslog("frontend %d/%d regained lock on channel %d (%s), tp %d", adapter, frontend, channel.Number(), channel.Name(), channel.Transponder());
+                      LostLock = false;
+                      }
++                  if (device->SdtFilter()->TransponderWrong()) {
++                     isyslog("frontend %d/%d is not receiving transponder %d for channel %d (%s) - retuning", adapter, frontend, channel.Transponder(), channel.Number(), channel.Name());
++                     device->SectionHandler()->SetStatus(false);
++                     tunerStatus = tsSet;
++                     lastDiseqc = NULL;
++                     lastSource = 0;
++                     continue;
++                     }
+                   tunerStatus = tsLocked;
+                   locked.Broadcast();
+                   lastTimeoutReport = 0;
+diff --git a/dvbsubtitle.c b/dvbsubtitle.c
+index fff3f8b8..5e5139ff 100644
+--- a/dvbsubtitle.c
++++ b/dvbsubtitle.c
+@@ -7,7 +7,7 @@
+  * Original author: Marco Schluessler <marco@lordzodiac.de>
+  * With some input from the "subtitles plugin" by Pekka Virtanen <pekka.virtanen@sci.fi>
+  *
+- * $Id: dvbsubtitle.c 4.1 2015/03/25 12:37:08 kls Exp $
++ * $Id: dvbsubtitle.c 4.2 2020/05/15 12:32:51 kls Exp $
+  */
+ 
+ #include "dvbsubtitle.h"
+@@ -479,11 +479,10 @@ void cSubtitleObject::DecodeCharacterString(const uchar *Data, int NumberOfCodes
+      for (int i = 0; i < NumberOfCodes; i++)
+          txt[i] = Data[i * 2 + 1];
+      txt[NumberOfCodes] = 0;
+-     bool singleByte;
+      const uchar *from = (uchar *)txt;
+      int len = NumberOfCodes;
+-     const char *CharacterTable = SI::getCharacterTable(from, len, &singleByte);
+-     dbgobjects(" table %s single %d raw '%s'", CharacterTable, singleByte, from);
++     const char *CharacterTable = SI::getCharacterTable(from, len);
++     dbgobjects(" table %s raw '%s'", CharacterTable, from);
+      cCharSetConv conv(CharacterTable, cCharSetConv::SystemCharacterTable());
+      const char *s = conv.Convert((const char *)from);
+      dbgobjects(" conv '%s'", s);
+diff --git a/eit.c b/eit.c
+index 72a45e5c..ffdec419 100644
+--- a/eit.c
++++ b/eit.c
+@@ -8,7 +8,7 @@
+  * Robert Schneider <Robert.Schneider@web.de> and Rolf Hakenes <hakenes@hippomi.de>.
+  * Adapted to 'libsi' for VDR 1.3.0 by Marcel Wiesweg <marcel.wiesweg@gmx.de>.
+  *
+- * $Id: eit.c 4.7 2019/05/20 09:55:22 kls Exp $
++ * $Id: eit.c 4.9 2020/05/04 13:02:14 kls Exp $
+  */
+ 
+ #include "eit.h"
+@@ -391,7 +391,9 @@ cTDT::cTDT(const u_char *Data)
+   if (abs(diff) > MAX_TIME_DIFF) {
+      mutex.Lock();
+      if (abs(diff) > MAX_ADJ_DIFF) {
+-        if (stime(&dvbtim) == 0)
++        timespec ts = {};
++        ts.tv_sec = dvbtim;
++        if (clock_settime(CLOCK_REALTIME, &ts) == 0)
+            isyslog("system time changed from %s (%ld) to %s (%ld)", *TimeToString(loctim), loctim, *TimeToString(dvbtim), dvbtim);
+         else
+            esyslog("ERROR while setting system time: %m");
+diff --git a/i18n.c b/i18n.c
+index f010b6bc..cd5906dd 100644
+--- a/i18n.c
++++ b/i18n.c
+@@ -4,7 +4,7 @@
+  * See the main source file 'vdr.c' for copyright information and
+  * how to reach the author.
+  *
+- * $Id: i18n.c 2.5 2012/09/01 10:53:43 kls Exp $
++ * $Id: i18n.c 4.1 2020/05/11 11:04:29 kls Exp $
+  */
+ 
+ /*
+@@ -60,6 +60,7 @@ const char *LanguageCodeList[] = {
+   "tur",
+   "ukr",
+   "ara",
++  "bul",
+   NULL
+   };
+ 
+diff --git a/libsi/descriptor.c b/libsi/descriptor.c
+index 6b00fc77..a94c0035 100644
+--- a/libsi/descriptor.c
++++ b/libsi/descriptor.c
+@@ -6,7 +6,7 @@
+  *   the Free Software Foundation; either version 2 of the License, or     *
+  *   (at your option) any later version.                                   *
+  *                                                                         *
+- *   $Id: descriptor.c 4.1 2019/03/15 16:12:43 kls Exp $
++ *   $Id: descriptor.c 4.2 2020/05/14 21:21:03 kls Exp $
+  *                                                                         *
+  ***************************************************************************/
+ 
+@@ -90,17 +90,21 @@ char *ExtendedEventDescriptors::getText(const char *separation1, const char *sep
+ }
+ 
+ char *ExtendedEventDescriptors::getText(char *buffer, int size, const char *separation1, const char *separation2) {
++   int tmpsize = size;
++   char tmpbuf[tmpsize];
++   const char *fromCode = NULL;
+    int index=0, len;
+    for (int i=0;i<length;i++) {
+       ExtendedEventDescriptor *d=(ExtendedEventDescriptor *)array[i];
+       if (!d)
+          continue;
+-      d->text.getText(buffer+index, size);
+-      len = strlen(buffer+index);
++      d->text.getText(tmpbuf+index, tmpsize, &fromCode);
++      len = strlen(tmpbuf+index);
+       index += len;
+-      size -= len;
++      tmpsize -= len;
+    }
+-
++   index = convertCharacterTable(tmpbuf, strlen(tmpbuf), buffer, size, fromCode);
++   size -= index;
+    int sepLen1 = strlen(separation1);
+    int sepLen2 = strlen(separation2);
+    bool separated = false;
+diff --git a/libsi/si.c b/libsi/si.c
+index e51770ab..e3d58cac 100644
+--- a/libsi/si.c
++++ b/libsi/si.c
+@@ -6,7 +6,7 @@
+  *   the Free Software Foundation; either version 2 of the License, or     *
+  *   (at your option) any later version.                                   *
+  *                                                                         *
+- *   $Id: si.c 3.3 2015/02/10 13:42:41 kls Exp $
++ *   $Id: si.c 4.2 2020/05/15 11:31:40 kls Exp $
+  *                                                                         *
+  ***************************************************************************/
+ 
+@@ -230,14 +230,14 @@ char *String::getText() {
+    return data;
+ }
+ 
+-char *String::getText(char *buffer, int size) {
++char *String::getText(char *buffer, int size, const char **fromCode) {
+    int len=getLength();
+    if (len < 0 || len >= size) {
+       strncpy(buffer, "text error", size);
+       buffer[size-1] = 0;
+       return buffer;
+    }
+-   decodeText(buffer, size);
++   decodeText(buffer, size, fromCode);
+    return buffer;
+ }
+ 
+@@ -311,7 +311,7 @@ static const char *CharacterTables2[] = {
+ 
+ #define NumEntries(Table) (sizeof(Table) / sizeof(char *))
+ 
+-static const char *SystemCharacterTable = NULL;
++static char *SystemCharacterTable = NULL;
+ bool SystemCharacterTableIsSingleByte = true;
+ 
+ bool systemCharacterTableIsSingleByte(void)
+@@ -321,32 +321,42 @@ bool systemCharacterTableIsSingleByte(void)
+ 
+ static char *OverrideCharacterTable = NULL;
+ 
+-void SetOverrideCharacterTable(const char *CharacterTable)
++bool SetOverrideCharacterTable(const char *CharacterTable)
+ {
+   free(OverrideCharacterTable);
+   OverrideCharacterTable = CharacterTable ? strdup(CharacterTable) : NULL;
++   if (OverrideCharacterTable) {
++      // Check whether the character table is known:
++      iconv_t cd = iconv_open(SystemCharacterTable, OverrideCharacterTable);
++      if (cd != (iconv_t)-1) {
++         iconv_close(cd);
++         return true;
++      }
++   }
++   return false;
+ }
+ 
+ bool SetSystemCharacterTable(const char *CharacterTable) {
+-   if (CharacterTable) {
+-      for (unsigned int i = 0; i < NumEntries(CharacterTables1); i++) {
+-         if (CharacterTables1[i] && strcasecmp(CharacterTable, CharacterTables1[i]) == 0) {
+-            SystemCharacterTable = CharacterTables1[i];
+-            SystemCharacterTableIsSingleByte = i <= SingleByteLimit;
+-            return true;
++   free(SystemCharacterTable);
++   SystemCharacterTable = CharacterTable ? strdup(CharacterTable) : NULL;
++   SystemCharacterTableIsSingleByte = true;
++   if (SystemCharacterTable) {
++      // Check whether the character table is known and "single byte":
++      char a[] = "ä";
++      char *pa = a;
++      char b[10];
++      char *pb = b;
++      size_t la = strlen(a);
++      size_t lb = sizeof(b);
++      iconv_t cd = iconv_open(SystemCharacterTable, "ISO-8859-1");
++      if (cd != (iconv_t)-1) {
++         if (iconv(cd, &pa, &la, &pb, &lb) != size_t(-1)) {
++            *pb = 0;
++            SystemCharacterTableIsSingleByte = strlen(b) == 1;
+          }
++         iconv_close(cd);
++         return true;
+       }
+-      for (unsigned int i = 0; i < NumEntries(CharacterTables2); i++) {
+-         if (CharacterTables2[i] && strcasecmp(CharacterTable, CharacterTables2[i]) == 0) {
+-            SystemCharacterTable = CharacterTables2[i];
+-            SystemCharacterTableIsSingleByte = true;
+-            return true;
+-         }
+-      }
+-   } else {
+-      SystemCharacterTable = NULL;
+-      SystemCharacterTableIsSingleByte = true;
+-      return true;
+    }
+    return false;
+ }
+@@ -386,9 +396,25 @@ const char *getCharacterTable(const unsigned char *&buffer, int &length, bool *i
+    return cs;
+ }
+ 
+-bool convertCharacterTable(const char *from, size_t fromLength, char *to, size_t toLength, const char *fromCode)
++// A similar version is used in VDR/tools.c:
++static int Utf8CharLen(const char *s)
+ {
+-  if (SystemCharacterTable) {
++  if (SystemCharacterTableIsSingleByte)
++     return 1;
++#define MT(s, m, v) ((*(s) & (m)) == (v)) // Mask Test
++  if (MT(s, 0xE0, 0xC0) && MT(s + 1, 0xC0, 0x80))
++     return 2;
++  if (MT(s, 0xF0, 0xE0) && MT(s + 1, 0xC0, 0x80) && MT(s + 2, 0xC0, 0x80))
++     return 3;
++  if (MT(s, 0xF8, 0xF0) && MT(s + 1, 0xC0, 0x80) && MT(s + 2, 0xC0, 0x80) && MT(s + 3, 0xC0, 0x80))
++     return 4;
++  return 1;
++}
++
++size_t convertCharacterTable(const char *from, size_t fromLength, char *to, size_t toLength, const char *fromCode)
++{
++  char *result = to;
++  if (SystemCharacterTable && fromCode) {
+      iconv_t cd = iconv_open(SystemCharacterTable, fromCode);
+      if (cd != (iconv_t)-1) {
+         char *fromPtr = (char *)from;
+@@ -407,29 +433,44 @@ bool convertCharacterTable(const char *from, size_t fromLength, char *to, size_t
+         }
+         *to = 0;
+         iconv_close(cd);
+-        return true;
+      }
+   }
+-  return false;
+-}
+-
+-// A similar version is used in VDR/tools.c:
+-static int Utf8CharLen(const char *s)
+-{
+-  if (SystemCharacterTableIsSingleByte)
+-     return 1;
+-#define MT(s, m, v) ((*(s) & (m)) == (v)) // Mask Test
+-  if (MT(s, 0xE0, 0xC0) && MT(s + 1, 0xC0, 0x80))
+-     return 2;
+-  if (MT(s, 0xF0, 0xE0) && MT(s + 1, 0xC0, 0x80) && MT(s + 2, 0xC0, 0x80))
+-     return 3;
+-  if (MT(s, 0xF8, 0xF0) && MT(s + 1, 0xC0, 0x80) && MT(s + 2, 0xC0, 0x80) && MT(s + 3, 0xC0, 0x80))
+-     return 4;
+-  return 1;
++  else {
++     size_t len = fromLength;
++     if (len >= toLength)
++        len = toLength - 1;
++     strncpy(to, from, len);
++     to[len] = 0;
++  }
++  // Handle control codes:
++  to = result;
++  size_t len = strlen(to);
++  while (len > 0) {
++     int l = Utf8CharLen(to);
++     if (l <= 2) {
++        unsigned char *p = (unsigned char *)to;
++        if (l == 2 && *p == 0xC2) // UTF-8 sequence
++           p++;
++        bool Move = true;
++        switch (*p) {
++          case 0x8A: *to = '\n'; break;
++          case 0xA0: *to = ' ';  break;
++          default:   Move = false;
++        }
++        if (l == 2 && Move) {
++           memmove(p, p + 1, len - 1); // we also copy the terminating 0!
++           len -= 1;
++           l = 1;
++        }
++     }
++     to += l;
++     len -= l;
++  }
++  return strlen(result);
+ }
+ 
+ // originally from libdtv, Copyright Rolf Hakenes <hakenes@hippomi.de>
+-void String::decodeText(char *buffer, int size) {
++void String::decodeText(char *buffer, int size, const char **fromCode) {
+    const unsigned char *from=data.getData(0);
+    char *to=buffer;
+    int len=getLength();
+@@ -437,38 +478,17 @@ void String::decodeText(char *buffer, int size) {
+       *to = '\0';
+       return;
+    }
+-   bool singleByte;
+-   const char *cs = getCharacterTable(from, len, &singleByte);
+-   if (singleByte && SystemCharacterTableIsSingleByte || !convertCharacterTable((const char *)from, len, to, size, cs)) {
++   const char *cs = getCharacterTable(from, len);
++   if (fromCode) {
+       if (len >= size)
+          len = size - 1;
+-      strncpy(to, (const char *)from, len);
+-      to[len] = 0;
++      strncpy(buffer, (const char *)from, len);
++      buffer[len] = 0;
++      if (!*fromCode)
++         *fromCode = cs;
+    }
+    else
+-      len = strlen(to); // might have changed
+-   // Handle control codes:
+-   while (len > 0) {
+-      int l = Utf8CharLen(to);
+-      if (l <= 2) {
+-         unsigned char *p = (unsigned char *)to;
+-         if (l == 2 && *p == 0xC2) // UTF-8 sequence
+-            p++;
+-         bool Move = true;
+-         switch (*p) {
+-           case 0x8A: *to = '\n'; break;
+-           case 0xA0: *to = ' ';  break;
+-           default:   Move = false;
+-         }
+-         if (l == 2 && Move) {
+-            memmove(p, p + 1, len - 1); // we also copy the terminating 0!
+-            len -= 1;
+-            l = 1;
+-         }
+-      }
+-      to += l;
+-      len -= l;
+-   }
++      convertCharacterTable((const char *)from, len, to, size, cs);
+ }
+ 
+ void String::decodeText(char *buffer, char *shortVersion, int sizeBuffer, int sizeShortVersion) {
+diff --git a/libsi/si.h b/libsi/si.h
+index e70de685..02b9cd05 100644
+--- a/libsi/si.h
++++ b/libsi/si.h
+@@ -6,7 +6,7 @@
+  *   the Free Software Foundation; either version 2 of the License, or     *
+  *   (at your option) any later version.                                   *
+  *                                                                         *
+- *   $Id: si.h 3.4 2015/02/10 13:54:28 kls Exp $
++ *   $Id: si.h 4.3 2020/05/15 12:32:51 kls Exp $
+  *                                                                         *
+  ***************************************************************************/
+ 
+@@ -508,7 +508,10 @@ public:
+    //so the maximum there is 256.
+    //returns the given buffer for convenience.
+    //The emphasis marks 0x86 and 0x87 are still available.
+-   char *getText(char *buffer, int size);
++   //If fromCode is given, the string will be copied into buffer in its raw form,
++   //without conversion, and he code table of the string is returned in this variable
++   //if it is NULL.
++   char *getText(char *buffer, int size, const char **fromCode = NULL);
+    //The same semantics as for getText(char*) apply.
+    //The short version of the text according to ETSI TR 101 211 (chapter 4.6)
+    //will be written into the shortVersion buffer (which should, therefore, have the same
+@@ -518,13 +521,15 @@ public:
+    char *getText(char *buffer, char *shortVersion, int sizeBuffer, int sizeShortVersion);
+ protected:
+    virtual void Parse() {}
+-   void decodeText(char *buffer, int size);
++   void decodeText(char *buffer, int size, const char **fromCode = NULL);
+    void decodeText(char *buffer, char *shortVersion, int sizeBuffer, int sizeShortVersion);
+ };
+ 
+ // Set the character table to use for strings that do not begin with a character
+ // table indicator. Call with NULL to turn this off.
+-void SetOverrideCharacterTable(const char *CharacterTable);
++// Must be called *after* SetSystemCharacterTable()!
++// Returns true if the character table was recognized.
++bool SetOverrideCharacterTable(const char *CharacterTable);
+ // Call this function to set the system character table. CharacterTable is a string
+ // like "iso8859-15" or "utf-8" (case insensitive).
+ // Returns true if the character table was recognized.
+@@ -533,8 +538,11 @@ bool SetSystemCharacterTable(const char *CharacterTable);
+ // a string indicating that table. If no table can be determined, the
+ // default ISO6937 is returned. If a table can be determined, the buffer
+ // and length are adjusted accordingly.
++// The isSingleByte parameter is deprecated and only present for backwards compatibility.
+ const char *getCharacterTable(const unsigned char *&buffer, int &length, bool *isSingleByte = NULL);
+-bool convertCharacterTable(const char *from, size_t fromLength, char *to, size_t toLength, const char *fromCode);
++// Copies 'from' to 'to' and converts characters according to 'fromCode', if given.
++// Returns the length of the resulting string.
++size_t convertCharacterTable(const char *from, size_t fromLength, char *to, size_t toLength, const char *fromCode);
+ bool systemCharacterTableIsSingleByte(void);
+ 
+ } //end of namespace
+diff --git a/menu.c b/menu.c
+index 76095481..baa93173 100644
+--- a/menu.c
++++ b/menu.c
+@@ -4,7 +4,7 @@
+  * See the main source file 'vdr.c' for copyright information and
+  * how to reach the author.
+  *
+- * $Id: menu.c 4.80 2019/05/28 15:24:43 kls Exp $
++ * $Id: menu.c 4.82 2020/05/18 16:47:29 kls Exp $
+  */
+ 
+ #include "menu.h"
+@@ -516,7 +516,6 @@ eOSState cMenuChannels::Delete(void)
+         Channels->Del(Channel);
+         cOsdMenu::Del(Index);
+         Propagate(Channels);
+-        Channels->SetModifiedByUser();
+         isyslog("channel %d deleted", DeletedChannel);
+         Deleted = true;
+         if (CurrentChannel && CurrentChannel->Number() != CurrentChannelNr) {
+@@ -541,10 +540,14 @@ void cMenuChannels::Move(int From, int To)
+      if (FromChannel && ToChannel) {
+         int FromNumber = FromChannel->Number();
+         int ToNumber = ToChannel->Number();
++        if (Channels->MoveNeedsDecrement(FromChannel, ToChannel)) {
++           ToChannel = Channels->Prev(ToChannel); // cListBase::Move() doesn't know about the channel list's numbered groups!
++           To--;
++           }
+         Channels->Move(FromChannel, ToChannel);
+         cOsdMenu::Move(From, To);
++        SetCurrent(Get(To));
+         Propagate(Channels);
+-        Channels->SetModifiedByUser();
+         isyslog("channel %d moved to %d", FromNumber, ToNumber);
+         if (CurrentChannel && CurrentChannel->Number() != CurrentChannelNr) {
+            if (!cDevice::PrimaryDevice()->Replaying() || cDevice::PrimaryDevice()->Transferring())
+@@ -2728,7 +2731,8 @@ eOSState cMenuRecordingEdit::DeleteMarks(void)
+   if (buttonDeleteMarks && Interface->Confirm(tr("Delete editing marks for this recording?"))) {
+      if (cMarks::DeleteMarksFile(recording)) {
+         SetHelpKeys();
+-        if (cControl *Control = cControl::Control(true)) {
++        cMutexLock ControlMutexLock;
++        if (cControl *Control = cControl::Control(ControlMutexLock, true)) {
+            if (const cRecording *Recording = Control->GetRecording()) {
+               if (strcmp(recording->FileName(), Recording->FileName()) == 0)
+                  Control->ClearEditingMarks();
+@@ -4454,7 +4458,11 @@ bool cMenuMain::Update(bool Force)
+ {
+   bool result = false;
+ 
+-  bool NewReplaying = cControl::Control() != NULL;
++  bool NewReplaying = false;
++  {
++    cMutexLock ControlMutexLock;
++    NewReplaying = cControl::Control(ControlMutexLock) != NULL;
++  }
+   if (Force || NewReplaying != replaying) {
+      replaying = NewReplaying;
+      // Replay control:
+diff --git a/player.c b/player.c
+index 5c95f4e4..ff54f495 100644
+--- a/player.c
++++ b/player.c
+@@ -4,7 +4,7 @@
+  * See the main source file 'vdr.c' for copyright information and
+  * how to reach the author.
+  *
+- * $Id: player.c 2.2 2012/04/28 11:52:50 kls Exp $
++ * $Id: player.c 4.1 2020/05/18 16:47:29 kls Exp $
+  */
+ 
+ #include "player.h"
+@@ -70,16 +70,24 @@ cString cControl::GetHeader(void)
+   return "";
+ }
+ 
++#if DEPRECATED_CCONTROL
+ cControl *cControl::Control(bool Hidden)
+ {
+   cMutexLock MutexLock(&mutex);
+   return (control && (!control->hidden || Hidden)) ? control : NULL;
+ }
++#endif
++
++cControl *cControl::Control(cMutexLock &MutexLock, bool Hidden)
++{
++  MutexLock.Lock(&mutex);
++  return (control && (!control->hidden || Hidden)) ? control : NULL;
++}
+ 
+ void cControl::Launch(cControl *Control)
+ {
+   cMutexLock MutexLock(&mutex);
+-  cControl *c = control; // keeps control from pointing to uninitialized memory
++  cControl *c = control; // keeps control from pointing to uninitialized memory TODO obsolete once DEPRECATED_CCONTROL is gone
+   control = Control;
+   delete c;
+ }
+diff --git a/player.h b/player.h
+index d67bf2a9..22c748bd 100644
+--- a/player.h
++++ b/player.h
+@@ -4,7 +4,7 @@
+  * See the main source file 'vdr.c' for copyright information and
+  * how to reach the author.
+  *
+- * $Id: player.h 4.4 2018/02/01 15:34:51 kls Exp $
++ * $Id: player.h 4.5 2020/05/18 16:47:29 kls Exp $
+  */
+ 
+ #ifndef __PLAYER_H
+@@ -114,10 +114,21 @@ public:
+   static void Launch(cControl *Control);
+   static void Attach(void);
+   static void Shutdown(void);
++#define DEPRECATED_CCONTROL 1
++#if DEPRECATED_CCONTROL
+   static cControl *Control(bool Hidden = false);
++         ///< Old version of this function, for backwards compatibility with plugins.
++         ///< Plugins should be changed to use the new version below, which does
++         ///< proper locking.
++         ///< Use of this function may result in program crashes in case replay is
++         ///< stopped immediately after starting it.
++#endif
++  static cControl *Control(cMutexLock &MutexLock, bool Hidden = false);
+          ///< Returns the current replay control (if any) in case it is currently
+          ///< visible. If Hidden is true, the control will be returned even if it is
+          ///< currently hidden.
++         ///< The given MutexLock must live as long as the replay control is accessed,
++         ///< and must go out of scope as soon as the control is no longer accessed.
+   };
+ 
+ #endif //__PLAYER_H
+diff --git a/recording.h b/recording.h
+index c5052044..abcaf4d5 100644
+--- a/recording.h
++++ b/recording.h
+@@ -4,7 +4,7 @@
+  * See the main source file 'vdr.c' for copyright information and
+  * how to reach the author.
+  *
+- * $Id: recording.h 4.8 2018/02/13 08:44:19 kls Exp $
++ * $Id: recording.h 4.9 2020/03/29 15:50:22 kls Exp $
+  */
+ 
+ #ifndef __RECORDING_H
+@@ -254,8 +254,6 @@ public:
+        ///< Touches the '.update' file in the video directory, so that other
+        ///< instances of VDR that access the same video directory can be triggered
+        ///< to update their recordings list.
+-       ///< This function is 'const', because it doesn't actually modify the list
+-       ///< of recordings.
+   static bool NeedsUpdate(void);
+   void ResetResume(const char *ResumeFileName = NULL);
+   void ClearSortNames(void);
+diff --git a/sdt.c b/sdt.c
+index 05cd931b..99efc0e8 100644
+--- a/sdt.c
++++ b/sdt.c
+@@ -4,7 +4,7 @@
+  * See the main source file 'vdr.c' for copyright information and
+  * how to reach the author.
+  *
+- * $Id: sdt.c 4.5 2015/08/02 11:33:23 kls Exp $
++ * $Id: sdt.c 4.6 2020/05/04 08:50:20 kls Exp $
+  */
+ 
+ #include "sdt.h"
+@@ -23,8 +23,13 @@ static bool DebugSdt = false;
+ cSdtFilter::cSdtFilter(cPatFilter *PatFilter)
+ {
+   source = cSource::stNone;
++  lastSource = cSource::stNone;
++  lastTransponder = 0;
++  lastNid = 0;
++  lastTid = 0;
+   patFilter = PatFilter;
+-  Set(0x11, 0x42);  // SDT
++  transponderState = tsUnknown;
++  Set(0x11, 0x42);  // SDT actual TS
+ }
+ 
+ void cSdtFilter::SetStatus(bool On)
+@@ -34,6 +39,7 @@ void cSdtFilter::SetStatus(bool On)
+   sectionSyncer.Reset();
+   if (!On)
+      source = cSource::stNone;
++  transponderState = tsUnknown;
+ }
+ 
+ void cSdtFilter::Trigger(int Source)
+@@ -45,11 +51,37 @@ void cSdtFilter::Trigger(int Source)
+ void cSdtFilter::Process(u_short Pid, u_char Tid, const u_char *Data, int Length)
+ {
+   cMutexLock MutexLock(&mutex);
+-  if (!(source && Transponder()))
+-     return;
+   SI::SDT sdt(Data, false);
+   if (!sdt.CheckCRCAndParse())
+      return;
++  if (transponderState == tsUnknown) {
++     // The transponder can be verified with any section, no sync required:
++     int Nid = sdt.getOriginalNetworkId();
++     int Tid = sdt.getTransportStreamId();
++     if (Source() != lastSource || !ISTRANSPONDER(Transponder(), lastTransponder)) {
++        // We expect a change in NID/TID:
++        if (Nid && Tid && Nid == lastNid && Tid == lastTid) {
++           transponderState = tsWrong;
++           dsyslog("SDT: channel %d NID/TID (%d/%d) not found, got %d/%d", Channel()->Number(), Channel()->Nid(), Channel()->Tid(), Nid, Tid);
++           return;
++           }
++        }
++     // NID/TID is acceptable:
++     lastSource = Source();
++     lastTransponder = Transponder();
++     lastNid = Nid;
++     lastTid = Tid;
++     if (Nid == Channel()->Nid() && Tid == Channel()->Tid()) {
++        // NID/TID correspond with the channel data:
++        transponderState = tsVerified;
++        }
++     else {
++        // NID/TID differ from the channel data, but we accept it, since this *is* the data for this transponder:
++        transponderState = tsAccepted;
++        }
++     }
++  if (!(source && Transponder()))
++     return;
+   if (!sectionSyncer.Sync(sdt.getVersionNumber(), sdt.getSectionNumber(), sdt.getLastSectionNumber()))
+      return;
+   cStateKey StateKey;
+diff --git a/sdt.h b/sdt.h
+index 01653f45..128b51ad 100644
+--- a/sdt.h
++++ b/sdt.h
+@@ -4,7 +4,7 @@
+  * See the main source file 'vdr.c' for copyright information and
+  * how to reach the author.
+  *
+- * $Id: sdt.h 3.1 2014/03/10 14:40:54 kls Exp $
++ * $Id: sdt.h 4.1 2020/05/04 08:50:20 kls Exp $
+  */
+ 
+ #ifndef __SDT_H
+@@ -15,16 +15,24 @@
+ 
+ class cSdtFilter : public cFilter {
+ private:
++  enum eTransponderState { tsUnknown, tsWrong, tsAccepted, tsVerified };
+   cMutex mutex;
+   cSectionSyncer sectionSyncer;
+   int source;
++  int lastSource;
++  int lastTransponder;
++  int lastNid;
++  int lastTid;
+   cPatFilter *patFilter;
++  enum eTransponderState transponderState;
+ protected:
+   virtual void Process(u_short Pid, u_char Tid, const u_char *Data, int Length);
+ public:
+   cSdtFilter(cPatFilter *PatFilter);
+   virtual void SetStatus(bool On);
+   void Trigger(int Source);
++  bool TransponderVerified(void) const { return transponderState == tsVerified; } // returns true if the expected NIT/TID have been received in the SDT
++  bool TransponderWrong(void) const { return transponderState == tsWrong; } // returns true if an expected change of NIT/TID has not happened
+   };
+ 
+ #endif //__SDT_H
+diff --git a/skinlcars.c b/skinlcars.c
+index aedca5dc..0f431631 100644
+--- a/skinlcars.c
++++ b/skinlcars.c
+@@ -4,7 +4,7 @@
+  * See the main source file 'vdr.c' for copyright information and
+  * how to reach the author.
+  *
+- * $Id: skinlcars.c 4.6 2017/11/08 10:10:30 kls Exp $
++ * $Id: skinlcars.c 4.7 2020/05/18 16:47:29 kls Exp $
+  */
+ 
+ // "Star Trek: The Next Generation"(R) is a registered trademark of Paramount Pictures,
+@@ -1741,12 +1741,13 @@ void cSkinLCARSDisplayMenu::Flush(void)
+ {
+   if (MenuCategory() == mcMain) {
+      cDevice *Device = cDevice::PrimaryDevice();
++     cMutexLock ControlMutexLock;
+      if (!Device->Replaying() || Device->Transferring()) {
+         LOCK_CHANNELS_READ;
+         const cChannel *Channel = Channels->GetByNumber(cDevice::PrimaryDevice()->CurrentChannel());
+         DrawLive(Channel);
+         }
+-     else if (cControl *Control = cControl::Control(true))
++     else if (cControl *Control = cControl::Control(ControlMutexLock, true))
+         DrawPlay(Control);
+      DrawTimers();
+      DrawDevices();
+diff --git a/svdrp.c b/svdrp.c
+index 861a0835..7656c55f 100644
+--- a/svdrp.c
++++ b/svdrp.c
+@@ -10,7 +10,7 @@
+  * and interact with the Video Disk Recorder - or write a full featured
+  * graphical interface that sits on top of an SVDRP connection.
+  *
+- * $Id: svdrp.c 4.39 2019/05/06 15:11:15 kls Exp $
++ * $Id: svdrp.c 4.42 2020/05/06 11:51:33 kls Exp $
+  */
+ 
+ #include "svdrp.h"
+@@ -840,8 +840,8 @@ const char *HelpPages[] = {
+   "    Used by peer-to-peer connections between VDRs to tell the other VDR\n"
+   "    to establish a connection to this VDR. The name is the SVDRP host name\n"
+   "    of this VDR, which may differ from its DNS name.",
+-  "DELC <number>\n"
+-  "    Delete channel.",
++  "DELC <number> | <id>\n"
++  "    Delete the channel with the given number or channel id.",
+   "DELR <id>\n"
+   "    Delete the recording with the given id. Before a recording can be\n"
+   "    deleted, an LSTR command should have been executed in order to retrieve\n"
+@@ -970,7 +970,7 @@ const char *HelpPages[] = {
+   "    Make the device with the given number the primary device.\n"
+   "    Without option it returns the currently active primary device in the same\n"
+   "    format as used by the LSTD command.",
+-  "PUTE [ file ]\n"
++  "PUTE [ <file> ]\n"
+   "    Put data into the EPG list. The data entered has to strictly follow the\n"
+   "    format defined in vdr(5) for the 'epg.data' file.  A '.' on a line\n"
+   "    by itself terminates the input and starts processing of the data (all\n"
+@@ -1379,49 +1379,50 @@ void cSVDRPServer::CmdCONN(const char *Option)
+ void cSVDRPServer::CmdDELC(const char *Option)
+ {
+   if (*Option) {
+-     if (isnumber(Option)) {
+-        LOCK_TIMERS_READ;
+-        LOCK_CHANNELS_WRITE;
+-        Channels->SetExplicitModify();
+-        if (cChannel *Channel = Channels->GetByNumber(strtol(Option, NULL, 10))) {
+-           if (const cTimer *Timer = Timers->UsesChannel(Channel)) {
+-              Reply(550, "Channel \"%s\" is in use by timer %s", Option, *Timer->ToDescr());
++     LOCK_TIMERS_READ;
++     LOCK_CHANNELS_WRITE;
++     Channels->SetExplicitModify();
++     cChannel *Channel = NULL;
++     if (isnumber(Option))
++        Channel = Channels->GetByNumber(strtol(Option, NULL, 10));
++     else
++        Channel = Channels->GetByChannelID(tChannelID::FromString(Option));
++     if (Channel) {
++        if (const cTimer *Timer = Timers->UsesChannel(Channel)) {
++           Reply(550, "Channel \"%s\" is in use by timer %s", Option, *Timer->ToDescr());
++           return;
++           }
++        int CurrentChannelNr = cDevice::CurrentChannel();
++        cChannel *CurrentChannel = Channels->GetByNumber(CurrentChannelNr);
++        if (CurrentChannel && Channel == CurrentChannel) {
++           int n = Channels->GetNextNormal(CurrentChannel->Index());
++           if (n < 0)
++              n = Channels->GetPrevNormal(CurrentChannel->Index());
++           if (n < 0) {
++              Reply(501, "Can't delete channel \"%s\" - list would be empty", Option);
+               return;
+               }
+-           int CurrentChannelNr = cDevice::CurrentChannel();
+-           cChannel *CurrentChannel = Channels->GetByNumber(CurrentChannelNr);
+-           if (CurrentChannel && Channel == CurrentChannel) {
+-              int n = Channels->GetNextNormal(CurrentChannel->Index());
+-              if (n < 0)
+-                 n = Channels->GetPrevNormal(CurrentChannel->Index());
+-              if (n < 0) {
+-                 Reply(501, "Can't delete channel \"%s\" - list would be empty", Option);
+-                 return;
+-                 }
+-              CurrentChannel = Channels->Get(n);
+-              CurrentChannelNr = 0; // triggers channel switch below
+-              }
+-           Channels->Del(Channel);
+-           Channels->ReNumber();
+-           Channels->SetModifiedByUser();
+-           Channels->SetModified();
+-           isyslog("SVDRP %s < %s deleted channel %s", Setup.SVDRPHostName, *clientName, Option);
+-           if (CurrentChannel && CurrentChannel->Number() != CurrentChannelNr) {
+-              if (!cDevice::PrimaryDevice()->Replaying() || cDevice::PrimaryDevice()->Transferring())
+-                 Channels->SwitchTo(CurrentChannel->Number());
+-              else
+-                 cDevice::SetCurrentChannel(CurrentChannel->Number());
+-              }
+-           Reply(250, "Channel \"%s\" deleted", Option);
++           CurrentChannel = Channels->Get(n);
++           CurrentChannelNr = 0; // triggers channel switch below
+            }
+-        else
+-           Reply(501, "Channel \"%s\" not defined", Option);
++        Channels->Del(Channel);
++        Channels->ReNumber();
++        Channels->SetModifiedByUser();
++        Channels->SetModified();
++        isyslog("SVDRP %s < %s deleted channel %s", Setup.SVDRPHostName, *clientName, Option);
++        if (CurrentChannel && CurrentChannel->Number() != CurrentChannelNr) {
++           if (!cDevice::PrimaryDevice()->Replaying() || cDevice::PrimaryDevice()->Transferring())
++              Channels->SwitchTo(CurrentChannel->Number());
++           else
++              cDevice::SetCurrentChannel(CurrentChannel->Number());
++           }
++        Reply(250, "Channel \"%s\" deleted", Option);
+         }
+      else
+-        Reply(501, "Error in channel number \"%s\"", Option);
++        Reply(501, "Channel \"%s\" not defined", Option);
+      }
+   else
+-     Reply(501, "Missing channel number");
++     Reply(501, "Missing channel number or id");
+ }
+ 
+ static cString RecordingInUseMessage(int Reason, const char *RecordingId, cRecording *Recording)
+@@ -2087,6 +2088,8 @@ void cSVDRPServer::CmdMOVC(const char *Option)
+                  int FromNumber = FromChannel->Number();
+                  int ToNumber = ToChannel->Number();
+                  if (FromNumber != ToNumber) {
++                    if (Channels->MoveNeedsDecrement(FromChannel, ToChannel))
++                       ToChannel = Channels->Prev(ToChannel); // cListBase::Move() doesn't know about the channel list's numbered groups!
+                     Channels->Move(FromChannel, ToChannel);
+                     Channels->ReNumber();
+                     Channels->SetModifiedByUser();
+diff --git a/thread.h b/thread.h
+index 790c29a8..5c351bfa 100644
+--- a/thread.h
++++ b/thread.h
+@@ -4,7 +4,7 @@
+  * See the main source file 'vdr.c' for copyright information and
+  * how to reach the author.
+  *
+- * $Id: thread.h 4.4 2018/03/04 11:27:55 kls Exp $
++ * $Id: thread.h 4.5 2020/03/29 15:53:48 kls Exp $
+  */
+ 
+ #ifndef __THREAD_H
+@@ -33,7 +33,7 @@ public:
+   bool Wait(int TimeoutMs = 0);
+        ///< Waits at most TimeoutMs milliseconds for a call to Signal(), or
+        ///< forever if TimeoutMs is 0.
+-       ///< Returns true if Signal() has been called, false it the given
++       ///< Returns true if Signal() has been called, false if the given
+        ///< timeout has expired.
+   void Signal(void);
+        ///< Signals a caller of Wait() that the condition it is waiting for is met.
+diff --git a/vdr.c b/vdr.c
+index 1f2e7ef8..2ff5cfb4 100644
+--- a/vdr.c
++++ b/vdr.c
+@@ -22,7 +22,7 @@
+  *
+  * The project's page is at http://www.tvdr.de
+  *
+- * $Id: vdr.c 4.30 2019/05/23 09:48:35 kls Exp $
++ * $Id: vdr.c 4.33 2020/05/18 16:47:29 kls Exp $
+  */
+ 
+ #include <getopt.h>
+@@ -131,20 +131,18 @@ static bool DropCaps(void)
+      fprintf(stderr, "vdr: cap_get_proc failed: %s\n", strerror(errno));
+      return false;
+      }
+-  char *caps_text = cap_to_text(caps_all, NULL);
+-  if (!caps_text) {
+-     fprintf(stderr, "vdr: cap_to_text failed: %s\n", strerror(errno));
+-     return false;
+-     }
+-  if (cap_free(caps_all)) {
+-     fprintf(stderr, "vdr: cap_free failed: %s\n", strerror(errno));
++  cap_flag_value_t cap_flag_value;
++  if (cap_get_flag(caps_all, CAP_SYS_TIME, CAP_PERMITTED , &cap_flag_value)) {
++     fprintf(stderr, "vdr: cap_get_flag failed: %s\n", strerror(errno));
+      return false;
+      }
+   cap_t caps;
+-  if (strstr(caps_text,"cap_sys_time"))
++  if (cap_flag_value == CAP_SET)
+      caps = cap_from_text("= cap_sys_nice,cap_sys_time,cap_net_raw=ep");
+-  else
++  else {
++     fprintf(stdout,"vdr: OS does not support cap_sys_time\n");
+      caps = cap_from_text("= cap_sys_nice,cap_net_raw=ep");
++     }
+   if (!caps) {
+      fprintf(stderr, "vdr: cap_from_text failed: %s\n", strerror(errno));
+      return false;
+@@ -728,8 +726,8 @@ int main(int argc, char *argv[])
+      isyslog("use of environment variable VDR_CHARSET_OVERRIDE (%s) is deprecated!", DeprecatedVdrCharsetOverride);
+ #endif
+   if (OverrideCharacterTable) {
+-     isyslog("override character table is '%s'", OverrideCharacterTable);
+-     SI::SetOverrideCharacterTable(OverrideCharacterTable);
++     bool known = SI::SetOverrideCharacterTable(OverrideCharacterTable);
++     isyslog("override character table is '%s' - %s", OverrideCharacterTable, known ? "known" : "unknown");
+      }
+ 
+   // Initialize internationalization:
+@@ -1198,8 +1196,19 @@ int main(int argc, char *argv[])
+         // Queued messages:
+         Skins.ProcessQueuedMessages();
+         // User Input:
+-        cOsdObject *Interact = Menu ? Menu : cControl::Control();
+-        eKeys key = Interface->GetKey(!Interact || !Interact->NeedsFastResponse());
++        bool NeedsFastResponse = Menu && Menu->NeedsFastResponse();
++        if (!NeedsFastResponse) {
++           // Must limit the scope of ControlMutexLock here to not hold the lock during the call to Interface->GetKey().
++           cMutexLock ControlMutexLock;
++           cControl *Control = cControl::Control(ControlMutexLock);
++           NeedsFastResponse = Control && Control->NeedsFastResponse();
++           }
++        eKeys key = Interface->GetKey(!NeedsFastResponse);
++        cOsdObject *Interact = Menu;
++        cMutexLock ControlMutexLock;
++        cControl *Control = NULL;
++        if (!Menu)
++           Interact = Control = cControl::Control(ControlMutexLock);
+         if (ISREALKEY(key)) {
+            EITScanner.Activity();
+            // Cancel shutdown countdown:
+@@ -1217,9 +1226,9 @@ int main(int argc, char *argv[])
+                bool WasMenu = Interact && Interact->IsMenu();
+                if (Menu)
+                   DELETE_MENU;
+-               else if (cControl::Control()) {
++               else if (Control) {
+                   if (cOsd::IsOpen())
+-                     cControl::Control()->Hide();
++                     Control->Hide();
+                   else
+                      WasOpen = false;
+                   }
+@@ -1235,9 +1244,9 @@ int main(int argc, char *argv[])
+                   }
+                else if (!Menu) {
+                   IsInfoMenu = true;
+-                  if (cControl::Control()) {
+-                     cControl::Control()->Hide();
+-                     Menu = cControl::Control()->GetInfo();
++                  if (Control) {
++                     Control->Hide();
++                     Menu = Control->GetInfo();
+                      if (Menu)
+                         Menu->Show();
+                      else
+@@ -1254,8 +1263,8 @@ int main(int argc, char *argv[])
+           // Direct main menu functions:
+           #define DirectMainFunction(function)\
+             { DELETE_MENU;\
+-            if (cControl::Control())\
+-               cControl::Control()->Hide();\
++            if (Control)\
++               Control->Hide();\
+             Menu = new cMenuMain(function);\
+             key = kNone; } // nobody else needs to see this key
+           case kSchedule:   DirectMainFunction(osSchedule); break;
+@@ -1269,8 +1278,8 @@ int main(int argc, char *argv[])
+                const char *PluginName = cRemote::GetPlugin();
+                if (PluginName) {
+                   DELETE_MENU;
+-                  if (cControl::Control())
+-                     cControl::Control()->Hide();
++                  if (Control)
++                     Control->Hide();
+                   cPlugin *plugin = cPluginManager::GetPlugin(PluginName);
+                   if (plugin) {
+                      Menu = plugin->MainMenuAction();
+@@ -1292,7 +1301,7 @@ int main(int argc, char *argv[])
+                   Menu = new cDisplayChannel(NORMALKEY(key));
+                   continue;
+                   }
+-               else if (cDisplayChannel::IsOpen() || cControl::Control()) {
++               else if (cDisplayChannel::IsOpen() || Control) {
+                   Interact->ProcessKey(key);
+                   continue;
+                   }
+@@ -1320,8 +1329,8 @@ int main(int argc, char *argv[])
+                break;
+           // Audio track control:
+           case kAudio:
+-               if (cControl::Control())
+-                  cControl::Control()->Hide();
++               if (Control)
++                  Control->Hide();
+                if (!cDisplayTracks::IsOpen()) {
+                   DELETE_MENU;
+                   Menu = cDisplayTracks::Create();
+@@ -1332,8 +1341,8 @@ int main(int argc, char *argv[])
+                break;
+           // Subtitle track control:
+           case kSubtitles:
+-               if (cControl::Control())
+-                  cControl::Control()->Hide();
++               if (Control)
++                  Control->Hide();
+                if (!cDisplaySubtitleTracks::IsOpen()) {
+                   DELETE_MENU;
+                   Menu = cDisplaySubtitleTracks::Create();
+@@ -1345,7 +1354,7 @@ int main(int argc, char *argv[])
+           // Pausing live video:
+           case kPlayPause:
+           case kPause:
+-               if (!cControl::Control()) {
++               if (!Control) {
+                   DELETE_MENU;
+                   if (Setup.PauseKeyHandling) {
+                      if (Setup.PauseKeyHandling > 1 || Interface->Confirm(tr("Pause live video?"))) {
+@@ -1358,7 +1367,7 @@ int main(int argc, char *argv[])
+                break;
+           // Instant recording:
+           case kRecord:
+-               if (!cControl::Control()) {
++               if (!Control) {
+                   if (Setup.RecordKeyHandling) {
+                      if (Setup.RecordKeyHandling > 1 || Interface->Confirm(tr("Start recording?"))) {
+                         if (cRecordControls::Start())
+@@ -1397,15 +1406,16 @@ int main(int argc, char *argv[])
+                break;
+           default: break;
+           }
+-        Interact = Menu ? Menu : cControl::Control(); // might have been closed in the mean time
++        Interact = Menu ? Menu : Control; // might have been closed in the mean time
+         if (Interact) {
+            LastInteract = Now;
+            eOSState state = Interact->ProcessKey(key);
+-           if (state == osUnknown && Interact != cControl::Control()) {
+-              if (ISMODELESSKEY(key) && cControl::Control()) {
+-                 state = cControl::Control()->ProcessKey(key);
++           if (state == osUnknown && Interact != Control) {
++              if (ISMODELESSKEY(key) && Control) {
++                 state = Control->ProcessKey(key);
+                  if (state == osEnd) {
+                     // let's not close a menu when replay ends:
++                    Control = NULL;
+                     cControl::Shutdown();
+                     continue;
+                     }
+@@ -1424,15 +1434,18 @@ int main(int argc, char *argv[])
+                             break;
+              case osRecordings:
+                             DELETE_MENU;
++                            Control = NULL;
+                             cControl::Shutdown();
+                             Menu = new cMenuMain(osRecordings, true);
+                             break;
+              case osReplay: DELETE_MENU;
++                            Control = NULL;
+                             cControl::Shutdown();
+                             cControl::Launch(new cReplayControl);
+                             break;
+              case osStopReplay:
+                             DELETE_MENU;
++                            Control = NULL;
+                             cControl::Shutdown();
+                             break;
+              case osPlugin: DELETE_MENU;
+@@ -1443,8 +1456,10 @@ int main(int argc, char *argv[])
+              case osBack:
+              case osEnd:    if (Interact == Menu)
+                                DELETE_MENU;
+-                            else
++                            else {
++                               Control = NULL;
+                                cControl::Shutdown();
++                               }
+                             break;
+              default:       ;
+              }
+@@ -1489,6 +1504,7 @@ int main(int argc, char *argv[])
+              // Instant resume of the last viewed recording:
+              case kPlay:
+                   if (cReplayControl::LastReplayed()) {
++                     Control = NULL;
+                      cControl::Shutdown();
+                      cControl::Launch(new cReplayControl);
+                      }
+@@ -1514,6 +1530,7 @@ int main(int argc, char *argv[])
+         int NewPrimaryDVB = Setup.PrimaryDVB;
+         if (NewPrimaryDVB != OldPrimaryDVB) {
+            DELETE_MENU;
++           Control = NULL;
+            cControl::Shutdown();
+            Skins.QueueMessage(mtInfo, tr("Switching primary DVB..."));
+            cOsdProvider::Shutdown();
+@@ -1534,7 +1551,7 @@ int main(int argc, char *argv[])
+               ShutdownHandler.countdown.Cancel();
+            }
+ 
+-        if (!cControl::Control() && !cRecordControls::Active() && !RecordingsHandler.Active() && (Now - cRemote::LastActivity()) > ACTIVITYTIMEOUT) {
++        if (!Control && !cRecordControls::Active() && !RecordingsHandler.Active() && (Now - cRemote::LastActivity()) > ACTIVITYTIMEOUT) {
+            // Shutdown:
+            // Check whether VDR will be ready for shutdown in SHUTDOWNWAIT seconds:
+            time_t Soon = Now + SHUTDOWNWAIT;

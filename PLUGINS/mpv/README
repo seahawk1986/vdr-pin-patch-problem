@@ -1,0 +1,204 @@
+This is a "plugin" for the Video Disk Recorder (VDR).
+
+Copyright (c) 2012, 2013 by Johns.  All Rights Reserved.
+Copyright (c) 2013 - 2015 by Maniac.  All Rights Reserved.
+Copyright (c) 2020 by ua0lnj.  All Rights Reserved.
+
+License: AGPLv3
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+Description
+-----------
+
+vdr-mpv is a fork of the vdr-play plugin from Johns. It uses libmpv for playing
+media (video, audio, picture) in VDR and also displays the VDR OSD (On Screen Display) during playback.
+You can play internet or network streams also. For this you need make mpv with lua script
+and youtube-dl (for youtube stream).
+You can record some network stream, and play it like normal vdr recordings. This is an experimental mpv
+function, so some streams may not be recorded correctly. Recording is made to the vdr video directory.
+
+Requirements
+------------
+
+- VDR version >= 2.2.0 (earlier versions may work, but are untested)
+- libmpv >= 0.30.0 (for old version use vdr-plugin-mpv 0.0.4.
+- xrandr (only needed for modeline switching)
+- libcdio (only needed for optical disc playback)
+
+Installation
+------------
+
+- extract the plugin archive and change to the folder
+- using "make install" the plugin will be compiled and installed on your system
+- adjust the command line arguments to fit your needs
+
+Command line arguments
+----------------------
+
+-a audio
+  mpv -audio-device (Default: alsa:device=default)
+  The audio out device which is used by mpv, this is directly passed as ao to mpv.
+
+-v video
+  mpv --vo (Default: vdpau)
+  The video out device which is used by mpv, this is directly passed as vo to mpv.
+
+-h hwdec
+  mpv -hwdec (Default: vdpau)
+  The hwdec which are used by mpv, this is directly passed as hwdec
+  to mpv. For latest mpv use -h gpu (also see -g parameter)
+
+-c gpuctx
+  mpv --gpu-context (Default: auto)
+  The GPU context (auto, x11, drm, x11egl).
+
+  It is best to set "-v gpu -h auto".
+  Set "-v gpu -h cuda -c x11" for use cuda with X11 and GLX. Latest mpv set X11 GLX deprecated, you need configure mpv with --enable-gl-x11.
+  Set "-v gpu -h auto -c drm" for use drm output and hardware decoder without X11.
+  Set "-v vdpau -h vdpau -c x11" for use vpdau with X11 and GLX.
+  Set "-v vaapi -h vaapi -c x11" for use vaapi with X11 and GLX, GLX is slower in Intel than EGL.
+  Set "-v gpu -h vaapi-copy" for use vaapi with X11 and EGL.
+
+-d device
+  optical disc device (Default: /dev/dvd)
+  The device which is used for playback of optical media
+
+-l languages
+  languages for audio and subtitles (Default: deu,de,ger,eng,en)"
+  The default languages choosen for audio and subtitles. Please note since different
+  container formats are using different standards you should pass this at least in
+  ISO-639-1 (two letters) and 639-2 (three letters). The list is seperated by comma.
+  This will is passed as alang and slang to mpv.
+
+-b /dir
+  file browser root directory
+
+-x extensions for playlists
+  files with this extensions are handled as playlists (Default: m3u,ini,pls,txt,playlist)
+
+-r
+  switch modeline to refresh rate of played file
+  xrandr is needed for this to work. If no xrandr is detected during compile time
+  this feature will be deactivated.
+
+-m text
+  the text displayed in VDR main menu (Default: MPV)
+
+-s
+  normally mpv tries to autoload LUA scripts, if this parameter is set no scripts are loaded
+  The mpv config directory is a "RESDIR/plugins/mpv/", so scripts directory is a "RESDIR/plugins/mpv/scripts"
+  Look in vdr/Makefile and vdr/Make.config for which RESDIR location
+
+-w
+   windowed mode, not fullscreen
+
+-g geometry
+  You can set X11 geometry with this parameter [W[xH]][+-x+-y][/WS] or x:y.
+  Resolution of OSD get from settings of output plugin (softhd*). OSD is scaled to video size.
+
+Plugin setup options
+--------------------
+
+- Hide main menu entry
+  Don't show the filebrowser in VDR main menu
+
+- Video Deinterlace
+  Video deinterlacing is enabled
+
+- Audio passthrough
+  Passthrough digital audio (like AC3, DTS) formats without decoding them
+  If passthrough is disabled the VDR volume control is used 
+
+- DTS-HD passthrough
+  Passthrough DTS-HD audio, this is only selectable if general passtrough is enabled
+
+- Enable stereo downmix
+  Downmix audio to stereo, this is only selectable if passthrough is disabled
+
+- Use prev/next keys for playlist control
+  If activated the next and previous keys are used for playlist navigation,
+  the keys 7 and 9 are then used for chapter navigation
+
+- Control playlist if no chapters in file
+  If a file without chapters is played use the prev/next keys for playlist control
+
+- Show subtitles
+  Showing subtitles if enabled
+
+- Exit at the end
+  Exit from mpv plugin to vdr when play file ended or by pressing the STOP key
+  If disabled, use the main menu to exit the plugin
+
+- Save position on quit
+  Save the current playback position on quit to resume playback
+  If exit at the end is disabled, press STOP to save position
+  To resume playback use (create) the directory "RESDIR/plugins/mpv/watch_later",
+  see you vdr/Makefile and vdr/Make.config
+
+Remote control keys
+-------------------
+In the browser mode you can use
+
+Red:                    Play selected file
+Green:                  Play selected directory, playlist mode
+Yellow:                 Shuffle playlist
+
+The following remote keys are supported in normal operation (no disc menu active)
+
+Play, Up:               Continue playback if paused
+Down, Pause:            Pause playback
+Fast rewind:            Seek 5 seconds backwards (fast rew is not supported by mpv)
+Fast forward:           Speed up playback speed up to 32 times
+Red:                    Time search functionality like used in VDR recordings
+Green:                  Seek 60 seconds backwards
+Yellow:                 Seek 60 seconds forward
+Blue:                   Show menu with current playback options, when network stream play
+                        show streams list
+Stop:                   Stop playback, exit from plugin if exit at the end is enabled
+Back:                   Show the browser menu from where the last file was launched
+Ok:                     Display current playback status or close status display
+                        if currently open. In playlist mode display current and
+                        total playlist positions. Start playback new file
+1:                      Seek 15 seconds backwards
+3:                      Seek 15 seconds forward
+5:                      Open disc nav menu
+7:                      Previous playlist item
+9:                      Next playlist item
+Next:                   Next chapter
+Previous:               Previous chapter
+Audio:                  Display a menu to switch between the available audio
+                        tracks
+Subtitles:              Display a menu to switch between the available subtitle
+                        tracks
+Record:                 Recording while play a network stream. Press STOP once to stop recording
+Channel Up              Next stream while play a network sream
+Channel Dn              Previous stream while play a network sream
+
+If a disc menu is active the following keys loose their default function described
+above and gain the following function
+
+Up, Down, Left, Right:  Navigate through the disc menu
+Ok:                     Select the currently highlighted entry in the disc menu
+Back:                   Back in the disc nav menu
+
+Playback options menu have:
+ Chapters menu, when playing a file with chapters:
+ You can select and go to the selected chapter
+
+ Playlist menu, when playing a playlist:
+ You can select and go to the selected file or stream
+
+
+SVDRP commands
+--------------
+
+PLAY filename           play given filename

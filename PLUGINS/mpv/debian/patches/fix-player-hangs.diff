@@ -1,0 +1,16 @@
+Title: fix player freezes
+Date: 2015-12-23
+Source: http://www.vdr-portal.de/board1-news/board2-vdr-news/p1283824-announce-mpv-plugin-0-0-4/#post1283824
+Abstract:
+ decreasing the timeout seems to prevent mpv freezes
+--- a/player.c
++++ b/player.c
+@@ -62,7 +62,7 @@
+ 
+   while (Player->PlayerIsRunning())
+   {
+-    mpv_event *event = mpv_wait_event(Player->hMpv, 10000);
++    mpv_event *event = mpv_wait_event(Player->hMpv, 5);
+     switch (event->event_id)
+     {
+       case MPV_EVENT_SHUTDOWN :

@@ -1,0 +1,13 @@
+vdr-2.6.3-dynamite.patch:6c0020229662a28bff352334d76aa701
+04_newplugin.patch:5712b881b046bb19d76ca167e59b964e
+81_Make_config.patch:36f888202c67e6a88639d0be605035ea
+99_ncursesw-include.patch:a089139cbf447e63ffe728ff3078244a
+opt-37-x_menuorg.patch:4ae9c02835244582b2827c356c6bfaba
+opt-42-x_MainMenuHooks-v1.0.1.patch:d24489dce5c8042b25dda66b00e9ce5f
+opt-56_eventdetails_v3.patch:fe67e3a60e90a7b4530f8b282a9e7619
+opt-65_pin.patch:39973e50dd05c612fb207b552f73c3fc
+vdr-2.3.9-hide-first-recording-level-v2.patch:3c56d2541bf551b66503dbb1d5bc0cb6
+vdr-2.2.0-missing-plugin.patch:9d12110c6842a770f8511c7e4e40c2cc
+vdr-2.4.2_undelete.diff:1bb0045ff512c909894a9ee53312141c
+vdr-2.6-patch-for-permashift.diff:5879b2b1525bd6f130a9f20af5f9c830
+fix-StopSectionHandler.patch:dbdbb6859c9b63cdcdee750d0dcf8c52

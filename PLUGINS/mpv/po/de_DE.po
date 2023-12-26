@@ -1,0 +1,120 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: vdr-mpv 0.0.3\n"
+"Report-Msgid-Bugs-To: <see README>\n"
+"POT-Creation-Date: 2021-02-11 22:27+1000\n"
+"PO-Revision-Date: 2015-06-29 22:14+0200\n"
+"Last-Translator: Maniac\n"
+"Language-Team: Maniac\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Recording - can't rewind"
+msgstr ""
+
+msgid "Recording - can't forwarding"
+msgstr ""
+
+msgid "Recording - can't seek"
+msgstr ""
+
+msgid "Recording - stop record first!"
+msgstr ""
+
+msgid "Recording Stoped"
+msgstr ""
+
+msgid "Recording - can't next"
+msgstr ""
+
+msgid "Recording - can't prev"
+msgstr ""
+
+msgid "Not network stream, can't recording!"
+msgstr ""
+
+msgid "Recording Started"
+msgstr ""
+
+#. TRANSLATORS: note the trailing blank!
+msgid "Jump: "
+msgstr "Springe zu:"
+
+msgid "Filebrowser"
+msgstr ""
+
+msgid "Disc"
+msgstr ""
+
+msgid "PlayDir"
+msgstr ""
+
+msgid "Shuffle"
+msgstr ""
+
+msgid "Playlist cannot be created!"
+msgstr ""
+
+msgid "Options"
+msgstr "Optionen"
+
+msgid "Show chapters"
+msgstr "Kapitel"
+
+msgid "Show playlist"
+msgstr ""
+
+msgid "Chapters"
+msgstr "Kapitel"
+
+msgid "Playlist"
+msgstr ""
+
+msgid "Recording - can't play!"
+msgstr ""
+
+msgid "mpv player plugin"
+msgstr ""
+
+msgid "Hide main menu entry"
+msgstr "Hauptmenüeintrag verstecken"
+
+msgid "Video Deinterlace"
+msgstr ""
+
+msgid "Audio Passthrough"
+msgstr "Audio durchreichen"
+
+msgid "DTS-HD Passthrough"
+msgstr "DTS-HD durchreichen"
+
+msgid "Enable stereo downmix"
+msgstr "Aktiviere Stereo downmix"
+
+msgid "Software volume control"
+msgstr ""
+
+msgid "Use prev/next keys for playlist control"
+msgstr "Weiter/Zurück zum steuern der Playlist"
+
+msgid "Control playlist if no chapters in file"
+msgstr "Steuere die Playlist wenn keine Kapitel vorhanden"
+
+msgid "Show media title instead of filename"
+msgstr "Media Titel anstatt des Dateinamen anzeigen"
+
+msgid "Show subtitles"
+msgstr ""
+
+msgid "Exit at the end"
+msgstr ""
+
+msgid "Save position on quit"
+msgstr ""

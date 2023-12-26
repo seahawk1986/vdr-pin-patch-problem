@@ -1,0 +1,16 @@
+Description: Increase maximum number of devices
+Author: Alexander Grothe
+Origin: as requested by https://www.vdr-portal.de/forum/index.php?thread/132284-maximal-16-ger%C3%A4te/
+Index: vdr/device.h
+===================================================================
+--- vdr.orig/device.h	2020-12-22 22:36:25.067597242 +0100
++++ vdr/device.h	2020-12-22 22:36:25.063597316 +0100
+@@ -26,7 +26,7 @@
+ #include "thread.h"
+ #include "tools.h"
+ 
+-#define MAXDEVICES         16 // the maximum number of devices in the system
++#define MAXDEVICES         32 // the maximum number of devices in the system
+ #define MAXPIDHANDLES      64 // the maximum number of different PIDs per device
+ #define MAXRECEIVERS       16 // the maximum number of receivers per device
+ #define MAXVOLUME         255

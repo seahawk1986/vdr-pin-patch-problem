@@ -1,0 +1,14 @@
+Description: fix error when vdr exits before cam.data has been loaded successully. This patch will be obsolete with VDR 2.4.0
+Author: Klaus Schmidinger
+Origin: https://www.vdr-portal.de/forum/index.php?thread/131711-vdr-2-3-9-fixes/&postID=1303033#post1303033
+--- a/ci.c
++++ b/ci.c
+@@ -2993,6 +2993,8 @@
+ 
+ void cChannelCamRelations::Save(void)
+ {
++  if (!*fileName)
++     return;
+   cMutexLock MutexLock(&mutex);
+   struct stat st;
+   if (stat(fileName, &st) == 0) {

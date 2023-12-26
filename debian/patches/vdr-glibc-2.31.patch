@@ -1,0 +1,28 @@
+Description: Replace obsolete stime() function with clock_settime()
+Origin: https://www.vdr-portal.de/forum/index.php?thread/133226-eit-c-394-13-error-stime-was-not-declared-in-this-scope-did-you-mean-ctime/&postID=1320753#post1320753
+Author: Manuel Reimer <manuel.reimer@gmx.de>
+ 
+From dcfa8ba29f4c95edbdceb0f1bbae0e62fa40c4e2 Mon Sep 17 00:00:00 2001
+From: Manuel Reimer <manuel.reimer@gmx.de>
+Date: Sat, 14 Dec 2019 12:01:13 +0100
+Subject: [PATCH 1/2] Replace obsolete stime() function with clock_settime()
+
+---
+ eit.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+Index: vdr-2.4.1/eit.c
+===================================================================
+--- vdr-2.4.1.orig/eit.c	2019-05-21 23:25:00.000000000 +0200
++++ vdr-2.4.1/eit.c	2020-04-17 07:44:58.000000000 +0200
+@@ -391,7 +391,9 @@
+   if (abs(diff) > MAX_TIME_DIFF) {
+      mutex.Lock();
+      if (abs(diff) > MAX_ADJ_DIFF) {
+-        if (stime(&dvbtim) == 0)
++        timespec ts = {};
++        ts.tv_sec = dvbtim;
++        if (clock_settime(CLOCK_REALTIME, &ts) == 0)
+            isyslog("system time changed from %s (%ld) to %s (%ld)", *TimeToString(loctim), loctim, *TimeToString(dvbtim), dvbtim);
+         else
+            esyslog("ERROR while setting system time: %m");

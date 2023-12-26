@@ -1,0 +1,120 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: vdr-mpv 0.0.4\n"
+"Report-Msgid-Bugs-To: <see README>\n"
+"POT-Creation-Date: 2021-02-11 22:53+1000\n"
+"PO-Revision-Date: 2020-01-12 01:04+1000\n"
+"Last-Translator: ua0lnj\n"
+"Language-Team: ua0lnj\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Recording - can't rewind"
+msgstr "Запись - нельзя назад"
+
+msgid "Recording - can't forwarding"
+msgstr "Запись - нельзя вперёд"
+
+msgid "Recording - can't seek"
+msgstr "Запись - перемотки нет"
+
+msgid "Recording - stop record first!"
+msgstr "Запись - сначала остановите!"
+
+msgid "Recording Stoped"
+msgstr "Запись остановлена"
+
+msgid "Recording - can't next"
+msgstr "Запись - нельзя след."
+
+msgid "Recording - can't prev"
+msgstr "Запись - нельзя пред."
+
+msgid "Not network stream, can't recording!"
+msgstr "Не сетевой поток, нет записи!"
+
+msgid "Recording Started"
+msgstr "Запись началась"
+
+#. TRANSLATORS: note the trailing blank!
+msgid "Jump: "
+msgstr "Перейти:"
+
+msgid "Filebrowser"
+msgstr "Просмотр файлов"
+
+msgid "Disc"
+msgstr "Диск"
+
+msgid "PlayDir"
+msgstr "Проиграть"
+
+msgid "Shuffle"
+msgstr "Смешать"
+
+msgid "Playlist cannot be created!"
+msgstr "Нельзя создать плейлист!"
+
+msgid "Options"
+msgstr "Опции"
+
+msgid "Show chapters"
+msgstr "Показ глав"
+
+msgid "Show playlist"
+msgstr "Показать список"
+
+msgid "Chapters"
+msgstr "Главы"
+
+msgid "Playlist"
+msgstr "Список"
+
+msgid "Recording - can't play!"
+msgstr "Запись - нельзя проиграть!"
+
+msgid "mpv player plugin"
+msgstr "MPV плагин"
+
+msgid "Hide main menu entry"
+msgstr "Скрыть основное меню"
+
+msgid "Video Deinterlace"
+msgstr "Убрать черезстрочность"
+
+msgid "Audio Passthrough"
+msgstr "Передать звук напрямую"
+
+msgid "DTS-HD Passthrough"
+msgstr "Передать DTS-HD"
+
+msgid "Enable stereo downmix"
+msgstr "Смешать в стерео"
+
+msgid "Software volume control"
+msgstr "Прогр. регул. громкости"
+
+msgid "Use prev/next keys for playlist control"
+msgstr "Пред./след. для управления плейлистом"
+
+msgid "Control playlist if no chapters in file"
+msgstr "Управлять плейлистом если нет глав"
+
+msgid "Show media title instead of filename"
+msgstr "Показ заголовка вместо имени файла"
+
+msgid "Show subtitles"
+msgstr "Показ субтитров"
+
+msgid "Exit at the end"
+msgstr "Выход в конце"
+
+msgid "Save position on quit"
+msgstr "Запомнить позицию"

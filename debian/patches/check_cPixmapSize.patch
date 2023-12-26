@@ -1,0 +1,17 @@
+Index: vdr/osd.c
+===================================================================
+--- vdr.orig/osd.c	2021-06-10 12:54:05.200041144 +0200
++++ vdr/osd.c	2021-06-10 12:58:46.656035618 +0200
+@@ -1150,7 +1150,11 @@
+ cPixmapMemory::cPixmapMemory(int Layer, const cRect &ViewPort, const cRect &DrawPort)
+ :cPixmap(Layer, ViewPort, DrawPort)
+ {
+-  data = MALLOC(tColor, this->DrawPort().Width() * this->DrawPort().Height());
++  size_t pixmapsize = this->DrawPort().Width() * this->DrawPort().Height();
++  if (pixmapsize > 0)
++      data = MALLOC(tColor, this->DrawPort().Width() * this->DrawPort().Height());
++  else
++      esyslog("warning: created Pixmap with size 0")
+   panning = false;
+ }
+ 

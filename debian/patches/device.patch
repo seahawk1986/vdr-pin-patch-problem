@@ -1,0 +1,36 @@
+Description: Experimental fix for tuning problems since VDR 2.3.9
+Author: xblades (vdr-portal.de)
+Origin: https://www.vdr-portal.de/forum/index.php?thread/133298-ztw-kein-bild-nach-umschalten-mit-vdr-ab-version-2-3-9/&postID=1323609#post1323609
+
+Index: vdr-2.4.1/device.c
+===================================================================
+--- vdr-2.4.1.orig/device.c	2020-03-15 10:41:01.741527994 +0100
++++ vdr-2.4.1/device.c	2020-03-15 10:41:01.737528270 +0100
+@@ -1811,19 +1811,23 @@
+   if (!Receiver || Receiver->device != this)
+      return;
+   bool receiversLeft = false;
+-  mutexReceiver.Lock();
+   for (int i = 0; i < MAXRECEIVERS; i++) {
++      mutexReceiver.Lock();
+       if (receiver[i] == Receiver) {
+          receiver[i] = NULL;
+          Receiver->device = NULL;
++         mutexReceiver.Unlock();
+          Receiver->Activate(false);
+          for (int n = 0; n < Receiver->numPids; n++)
+              DelPid(Receiver->pids[n]);
+          }
+-      else if (receiver[i])
+-         receiversLeft = true;
++      else {
++         if (receiver[i]) {
++            receiversLeft = true;
++         }
++         mutexReceiver.Unlock();
+       }
+-  mutexReceiver.Unlock();
++  }
+   if (camSlot) {
+      if (Receiver->priority > MINPRIORITY) { // priority check to avoid an infinite loop with the CAM slot's caPidReceiver
+         camSlot->StartDecrypting();

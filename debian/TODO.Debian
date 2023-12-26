@@ -1,0 +1,4 @@
+TODO: When plugin could not be loaded, log stderr output somewhere
+TODO: Get rid of bash in init script
+TODO: The runvdr module (re)loading stuff is weird - it was introduced to workaround driver bugs and can probably be removed
+TODO: Get rid of configuraable PLUGIN_DIR, PLUGIN_CFG_DIR, PLUGIN_PREFIX, CMDHOOKSDIR and REC_CMD

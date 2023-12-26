@@ -1,0 +1,75 @@
+Patches applied to vanilla vdr sources
+-------------------------------------- 
+
+vdr-2.6.3-dynamite.patch
+    Lars Hanisch <dvb@flensrocker.de>, MarkusE (vdr-portal.de)
+
+    Patch for VDR to support hotpluggable devices via the dynamite plugin.
+
+04_newplugin.patch
+    Thomas Schmidt <tschmidt@debian.org>
+
+    Patch for the newplugin-script, to not require a normal vdr-source-dir
+
+81_Make_config.patch
+    Tobias Grimm <vdr@e-tobi.net>
+
+    Add Make.config to compile debug versions.
+
+99_ncursesw-include.patch
+    Tobias Grimm <tg@e-tobi.net>
+
+    Use ncursesw header file
+
+opt-37-x_menuorg.patch
+    Tobias Grimm <tg@e-tobi.net>
+
+    This patch is required by the MenuOrg plugin. It adds a service interface,
+    that can be implemented by plugins to reorganize  VDR's main menu entries
+    with the ability to create custom sub menus. This is version 0.5.s of the
+    patch
+
+opt-42-x_MainMenuHooks-v1.0.1.patch
+    Frank Schmirler <vdrdev@schmirler.de>
+
+    This patch allows plugins to replace the VDR mainmenus "Schedule",
+    "Channels", "Timers" and "Recordings" by a different implementation.
+
+opt-56_eventdetails_v3.patch
+    Michael Eiler <eiler.mike@gmail.com>      
+
+    Patch for vdr-plugin-restfulapi
+
+opt-65_pin.patch
+    Jörg Wendel (horchi@vdr-portal)
+
+    patch for the pin plugin
+
+vdr-2.3.9-hide-first-recording-level-v2.patch
+    Lars Hanisch <dvb@flensrocker.de>, Saman (vdr-portal.de)
+
+    Hide the first level of directories in the recordings menu, all recordings
+    are stored at the "local" directory
+
+vdr-2.2.0-missing-plugin.patch
+    Ville Skyttä <ville.skytta@iki.fi>
+
+    Don't exit with an error if a plugin can't be loaded
+
+vdr-2.4.2_undelete.diff
+    kamel5
+
+    this patch allows to restore deleted recordings until the vdr scrubs them
+    from disk
+
+vdr-2.6-patch-for-permashift.diff
+    Eike Sauer <eike.sauer@web.de>
+
+    Add permashift functionality to vdr
+
+fix-StopSectionHandler.patch
+    Markus Ehrnsperger
+
+    delete sectionHandler first to prevent use with partially deleted
+    dependencies
+

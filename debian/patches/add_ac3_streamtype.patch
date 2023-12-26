@@ -1,0 +1,37 @@
+Description: Add detection for EAC3 streams in regular files
+Author: jsffm (vdr-portal.de)
+Origin: https://www.vdr-portal.de/forum/index.php?thread/132236-erkennung-von-eac3-tonspuren-aus-nicht-dvb-quellen
+--- a/remux.c
++++ b/remux.c
+@@ -839,9 +839,11 @@
+                       break;
+            case 0x81: // STREAMTYPE_USER_PRIVATE - AC3 audio for ATSC and BD
+            case 0x82: // STREAMTYPE_USER_PRIVATE - DTS audio for BD
++           case 0x87: // STREAMTYPE_USER_PRIVATE - EAC3
+                       {
+                       dbgpatpmt(" %s",
+                           stream.getStreamType() == 0x81 ? "AC3" :
++			  stream.getStreamType() == 0x87 ? "AC3" :
+                           stream.getStreamType() == 0x82 ? "DTS" : "");
+                       char lang[MAXLANGCODE1] = { 0 };
+                       SI::Descriptor *d;
+--- a/pat.c
++++ b/pat.c
+@@ -545,6 +545,7 @@
+                          }
+                       // fall through
+               case 0x81: // STREAMTYPE_USER_PRIVATE
++              case 0x87: // EAC3
+                       if (Setup.StandardCompliance == STANDARD_ANSISCTE) { // ATSC A/53 AUDIO (ANSI/SCTE 57)
+                          char lang[MAXLANGCODE1] = { 0 };
+                          SI::Descriptor *d;
+@@ -575,7 +576,8 @@
+                          break;
+                          }
+                       // fall through
+-              case 0x83 ... 0xFF: // STREAMTYPE_USER_PRIVATE
++              case 0x83 ... 0x86: // STREAMTYPE_USER_PRIVATE
++              case 0x88 ... 0xFF: // STREAMTYPE_USER_PRIVATE
+                       {
+                       char lang[MAXLANGCODE1] = { 0 };
+                       bool IsAc3 = false;

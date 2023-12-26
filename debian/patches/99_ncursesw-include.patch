@@ -1,0 +1,16 @@
+Description: Use ncursesw header file
+Author: Tobias Grimm <tg@e-tobi.net>
+
+Index: vdr-2.6.4/PLUGINS/src/skincurses/skincurses.c
+===================================================================
+--- vdr-2.6.4.orig/PLUGINS/src/skincurses/skincurses.c	2023-02-18 14:06:41.947407469 +0000
++++ vdr-2.6.4/PLUGINS/src/skincurses/skincurses.c	2023-02-18 14:06:41.943407525 +0000
+@@ -6,7 +6,7 @@
+  * $Id: skincurses.c 5.1 2021/07/01 15:40:46 kls Exp $
+  */
+ 
+-#include <ncurses.h>
++#include <ncursesw/ncurses.h>
+ #include <vdr/osd.h>
+ #include <vdr/plugin.h>
+ #include <vdr/skins.h>

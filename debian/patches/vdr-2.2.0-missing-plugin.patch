@@ -1,0 +1,36 @@
+Description: Don't exit with an error if a plugin can't be loaded
+Origin: http://pkgs.fedoraproject.org/cgit/vdr.git/tree/vdr-1.7.21-plugin-missing.patch
+Forwarded: no
+Author: Ville Skyttä <ville.skytta@iki.fi>
+
+Index: vdr-2.6.4/plugin.c
+===================================================================
+--- vdr-2.6.4.orig/plugin.c	2023-02-18 14:06:44.239374823 +0000
++++ vdr-2.6.4/plugin.c	2023-02-18 14:06:44.235374879 +0000
+@@ -353,16 +353,21 @@
+   char *p = strchr(s, ' ');
+   if (p)
+      *p = 0;
+-  dlls.Add(new cDll(cString::sprintf("%s/%s%s%s%s", directory, LIBVDR_PREFIX, s, SO_INDICATOR, APIVERSION), Args));
++  cString dllFilename = cString::sprintf("%s/%s%s%s%s", directory, LIBVDR_PREFIX, s, SO_INDICATOR, APIVERSION);
++  struct stat st;
++  if (stat(dllFilename, &st) && errno == ENOENT) {
++     esyslog("WARN: missing plugin '%s'", s);
++     fprintf(stderr, "vdr: missing plugin '%s'\n", s);
++     }
++  else
++     dlls.Add(new cDll(dllFilename, Args));
+   free(s);
+ }
+ 
+ bool cPluginManager::LoadPlugins(bool Log)
+ {
+-  for (cDll *dll = dlls.First(); dll; dll = dlls.Next(dll)) {
+-      if (!dll->Load(Log))
+-         return false;
+-      }
++  for (cDll *dll = dlls.First(); dll; dll = dlls.Next(dll))
++      dll->Load(Log);
+   return true;
+ }
+ 

@@ -1,0 +1,21 @@
+Description: delete sectionHandler first to prevent use with partially deleted dependencies
+Author: Markus Ehrnsperger
+Origin: https://www.vdr-portal.de/forum/index.php?thread/135570-core-dump-um-mar-26-04-04-23-umstellung-sommerzeit/&postID=1358814#post1358814
+
+Index: vdr-2.6.1/device.c
+===================================================================
+--- vdr-2.6.1.orig/device.c	2023-05-13 08:17:44.000000000 +0000
++++ vdr-2.6.1/device.c	2023-05-13 08:18:36.291351008 +0000
+@@ -723,11 +723,11 @@
+      return;
+      }
+   if (sectionHandler) {
++     delete sectionHandler;
+      delete nitFilter;
+      delete sdtFilter;
+      delete patFilter;
+      delete eitFilter;
+-     delete sectionHandler;
+      nitFilter = NULL;
+      sdtFilter = NULL;
+      patFilter = NULL;
