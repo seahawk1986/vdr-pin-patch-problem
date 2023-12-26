@@ -894,7 +894,6 @@ bool cDevice::SwitchChannel(int Direction)
      const cChannel *Channel;
      while ((Channel = Channels->GetByNumber(n, Direction)) != NULL) {
            // try only channels which are currently available
-           if (!cStatus::MsgChannelProtected(0, Channel))      // PIN PATCH
            if (GetDevice(Channel, LIVEPRIORITY, true, true))
               break;
            n = Channel->Number() + Direction;
@@ -916,12 +915,6 @@ bool cDevice::SwitchChannel(int Direction)
 
 eSetChannelResult cDevice::SetChannel(const cChannel *Channel, bool LiveView)
 {
-  // I hope 'LiveView = false' indicates a channel switch for recording, // PIN PATCH
-  // I really don't know, but it works ...                               // PIN PATCH
-
-  if (LiveView && cStatus::MsgChannelProtected(this, Channel))           // PIN PATCH
-     return scrNotAvailable;                                             // PIN PATCH
-
   cMutexLock MutexLock(&mutexChannel); // to avoid a race between SVDRP CHAN and HasProgramme()
   cStatus::MsgChannelSwitch(this, 0, LiveView);
 

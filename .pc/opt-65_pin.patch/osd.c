@@ -1844,7 +1844,6 @@ int cOsd::osdHeight = 0;
 cSize cOsd::maxPixmapSize(INT_MAX, INT_MAX);
 cVector<cOsd *> cOsd::Osds;
 cMutex cOsd::mutex;
-bool cOsd::pinValid = false;   // PIN PATCH
 
 cOsd::cOsd(int Left, int Top, uint Level)
 {

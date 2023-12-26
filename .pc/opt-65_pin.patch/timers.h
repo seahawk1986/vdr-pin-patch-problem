@@ -45,7 +45,6 @@ private:
   int start;          ///< the start and stop time of this timer as given by the user,
   int stop;           ///< in the form hhmm, with hh (00..23) and mm (00..59) added as hh*100+mm
   int priority;
-  int fskProtection;                                               // PIN PATCH
   int lifetime;
   mutable char pattern[NAME_MAX * 2 + 1]; // same size as 'file', to be able to initially fill 'pattern' with 'file' in the 'Edit timer' menu
   mutable char file[NAME_MAX * 2 + 1]; // *2 to be able to hold 'title' and 'episode', which can each be up to 255 characters long
@@ -71,7 +70,6 @@ public:
   int Start(void) const { return start; }
   int Stop(void) const { return stop; }
   int Priority(void) const { return priority; }
-  int FskProtection(void) const { return fskProtection; }          // PIN PATCH
   int Lifetime(void) const { return lifetime; }
   const char *Pattern(void) const { return pattern; }
   const char *File(void) const { return file; }
@@ -122,7 +120,6 @@ public:
   void SetRemote(const char *Remote);
   void SetDeferred(int Seconds);
   void SetFlags(uint Flags);
-  void SetFskProtection(int aFlag);                                // PIN PATCH
   void ClrFlags(uint Flags);
   void InvFlags(uint Flags);
   bool HasFlags(uint Flags) const;

@@ -1036,18 +1036,6 @@ cMenuEditTimer::cMenuEditTimer(cTimer *Timer, bool New)
      Add(new cMenuEditBitItem( tr("VPS"),          &data.flags, tfVps));
      Add(new cMenuEditIntItem( tr("Priority"),     &data.priority, 0, MAXPRIORITY));
      Add(new cMenuEditIntItem( tr("Lifetime"),     &data.lifetime, 0, MAXLIFETIME));
-
-     // PIN PATCH
-     if (cOsd::pinValid || !data.fskProtection) Add(new cMenuEditBoolItem(tr("Childlock"),&data.fskProtection));
-     else {
-        char* buf = 0;
-        int res = 0;
-        res = asprintf(&buf, "%s\t%s", tr("Childlock"), data.fskProtection ? tr("yes") : tr("no"));
-        if (res < 0) ; // memory problems :o
-        Add(new cOsdItem(buf));
-        free(buf);
-        }
-
      Add(file = new cMenuEditStrItem( tr("File"),   data.file, sizeof(data.file)));
      SetFirstDayItem();
      SetPatternItem(true);
@@ -3143,8 +3131,7 @@ void cMenuRecordings::Set(bool Refresh)
                       }
                    }
                }
-            if (*Item->Text() && !LastDir
-                && (!cStatus::MsgReplayProtected(Item->Recording(), Item->Name(), base, Item->IsDirectory(), true))) { // PIN PATCH
+            if (*Item->Text() && !LastDir) {
                Add(Item);
                LastItem = Item;
                if (Item->IsDirectory())
@@ -3215,9 +3202,6 @@ eOSState cMenuRecordings::Play(void)
 {
   cMenuRecordingItem *ri = (cMenuRecordingItem *)Get(Current());
   if (ri) {
-     if (cStatus::MsgReplayProtected(ri->Recording(), ri->Name(), base,
-                                     ri->IsDirectory()) == true)    // PIN PATCH
-        return osContinue;                                          // PIN PATCH
      if (ri->IsDirectory())
         Open();
      else {
@@ -4565,22 +4549,19 @@ void cMenuMain::Set(void)
 
   // Basic menu items:
 
-  // PIN PATCH
-  if (!cStatus::MsgMenuItemProtected("Schedule", true))   Add(new cOsdItem(hk(tr("Schedule")),   osSchedule));
-  if (!cStatus::MsgMenuItemProtected("Channels", true))   Add(new cOsdItem(hk(tr("Channels")),   osChannels));
-  if (!cStatus::MsgMenuItemProtected("Timers", true))     Add(new cOsdItem(hk(tr("Timers")),     osTimers));
-  if (!cStatus::MsgMenuItemProtected("Recordings", true)) Add(new cOsdItem(hk(tr("Recordings")), osRecordings));
+  Add(new cOsdItem(hk(tr("Schedule")),   osSchedule));
+  Add(new cOsdItem(hk(tr("Channels")),   osChannels));
+  Add(new cOsdItem(hk(tr("Timers")),     osTimers));
+  Add(new cOsdItem(hk(tr("Recordings")), osRecordings));
 
   // Plugins:
 
   for (int i = 0; ; i++) {
       cPlugin *p = cPluginManager::GetPlugin(i);
       if (p) {
-         if (!cStatus::MsgPluginProtected(p, true)) {          // PIN PATCH
          const char *item = p->MainMenuEntry();
          if (item)
             Add(new cMenuPluginItem(hk(item), i));
-         }
          }
       else
          break;
@@ -4588,9 +4569,8 @@ void cMenuMain::Set(void)
 
   // More basic menu items:
 
-  if (!cStatus::MsgMenuItemProtected("Setup", true)) Add(new cOsdItem(hk(tr("Setup")), osSetup));  // PIN PATCH
+  Add(new cOsdItem(hk(tr("Setup")),      osSetup));
   if (Commands.Count())
-     if (!cStatus::MsgMenuItemProtected("Commands", true))     // PIN PATCH
      Add(new cOsdItem(hk(tr("Commands")),  osCommands));
 
   }
@@ -4665,17 +4645,6 @@ eOSState cMenuMain::ProcessKey(eKeys Key)
   eOSState state = cOsdMenu::ProcessKey(Key);
   HadSubMenu |= HasSubMenu();
 
-
-  // > PIN PATCH
-  cOsdItem* item = Get(Current());
-
-  if (item && item->Text() && state != osContinue && state != osUnknown && state != osBack)
-     if (cStatus::MsgMenuItemProtected(item->Text()))
-        return osContinue;
-  // PIN PATCH <
-
-
-
   cOsdObject *menu = NULL;
   switch (state) {
     case osSchedule:
@@ -4721,7 +4690,6 @@ eOSState cMenuMain::ProcessKey(eKeys Key)
                          if (item) {
                             cPlugin *p = cPluginManager::GetPlugin(item->PluginIndex());
                             if (p) {
-                               if (!cStatus::MsgPluginProtected(p)) {  // PIN PATCH
                                cOsdObject *menu = p->MainMenuAction();
                                if (menu) {
                                   if (menu->IsMenu())
@@ -4733,7 +4701,6 @@ eOSState cMenuMain::ProcessKey(eKeys Key)
                                   }
                                }
                             }
-                         }
                          state = osEnd;
                        }
                        break;
@@ -4954,7 +4921,6 @@ const cChannel *cDisplayChannel::NextAvailableChannel(const cChannel *Channel, i
            Channel = Direction > 0 ? Channels->Next(Channel) : Channels->Prev(Channel);
            if (!Channel && Setup.ChannelsWrap)
               Channel = Direction > 0 ? Channels->First() : Channels->Last();
-           if (!cStatus::MsgChannelProtected(0, Channel))                   // PIN PATCH
            if (Channel && !Channel->GroupSep() && cDevice::GetDevice(Channel, LIVEPRIORITY, true, true))
               return Channel;
            }
@@ -5632,7 +5598,6 @@ bool cRecordControls::Start(cTimers *Timers, cTimer *Timer, bool Pause)
            for (int i = 0; i < MAXRECORDCONTROLS; i++) {
                if (!RecordControls[i]) {
                   RecordControls[i] = new cRecordControl(device, Timers, Timer, Pause);
-                  cStatus::MsgRecordingFile(RecordControls[i]->FileName());  // PIN PATCH
                   return RecordControls[i]->Process(time(NULL));
                   }
                }

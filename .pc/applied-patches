@@ -5,3 +5,4 @@ vdr-2.6.3-dynamite.patch
 opt-37-x_menuorg.patch
 opt-42-x_MainMenuHooks-v1.0.1.patch
 opt-56_eventdetails_v3.patch
+opt-65_pin.patch

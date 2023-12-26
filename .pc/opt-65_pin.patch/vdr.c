@@ -72,7 +72,6 @@
 #include "tools.h"
 #include "transfer.h"
 #include "videodir.h"
-#include "status.h"     // PIN PATCH
 
 #define MINCHANNELWAIT        10 // seconds to wait between failed channel switchings
 #define ACTIVITYTIMEOUT       60 // seconds before starting housekeeping
@@ -1215,7 +1214,6 @@ int main(int argc, char *argv[])
         if (!Menu)
            Interact = Control = cControl::Control(ControlMutexLock);
         if (ISREALKEY(key)) {
-           cStatus::MsgUserAction(key);           // PIN PATCH
            EITScanner.Activity();
            // Cancel shutdown countdown:
            if (ShutdownHandler.countdown)
@@ -1288,11 +1286,9 @@ int main(int argc, char *argv[])
                      Control->Hide();
                   cPlugin *plugin = cPluginManager::GetPlugin(PluginName);
                   if (plugin) {
-                     if (!cStatus::MsgPluginProtected(plugin)) {  // PIN PATCH
                      Menu = plugin->MainMenuAction();
                      if (Menu)
                         Menu->Show();
-                     }
                      }
                   else
                      esyslog("ERROR: unknown plugin '%s'", PluginName);
@@ -1512,11 +1508,9 @@ int main(int argc, char *argv[])
              // Instant resume of the last viewed recording:
              case kPlay:
                   if (cReplayControl::LastReplayed()) {
-                     if (cStatus::MsgReplayProtected(0, cReplayControl::LastReplayed(), 0, false) == false) {  // PIN PATCH
                      Control = NULL;
                      cControl::Shutdown();
                      cControl::Launch(new cReplayControl);
-                     }
                      }
                   else
                      DirectMainFunction(osRecordings); // no last viewed recording, so enter the Recordings menu

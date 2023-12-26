@@ -351,7 +351,7 @@ srcdoc:
 clean:
 	@$(MAKE) --no-print-directory -C $(LSIDIR) clean
 	@-rm -f $(OBJS) $(DEPFILE) vdr vdr.pc core* *~
-	@-rm -rf $(LOCALEDIR) $(PODIR)/*~ $(PODIR)/*.mo $(PODIR)/*.pot
+	@-rm -rf $(LOCALEDIR) $(PODIR)/*.mo $(PODIR)/*.pot
 	@-rm -rf include
 	@-rm -rf srcdoc
 CLEAN: clean
